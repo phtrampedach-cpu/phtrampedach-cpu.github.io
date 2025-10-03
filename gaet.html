@@ -5,22 +5,152 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gæt</title>
   <link rel="stylesheet" href="styles.css">
+  <!-- Firebase CDN -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
-  <!-- Menu-bar -->
 <header>
-<nav class="menu-bar">
-  <a href="index.html">Forside</a>
-  <a href="about.html" >Om mig</a>
-    <a href="gaet.html" class="active" >Gæt</a>
-  <a href="contact.html" >Kontakt</a>
-</nav>
-</header
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="about.html">Om mig</a>
+    <a href="contact.html">Kontakt</a>
+    <a href="gaet.html" class="active">Gæt</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Gæt & Leaderboard</h1>
+
+  <!-- Login form -->
+  <div id="login-div">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button id="login-btn">Login / Opret bruger</button>
+    <p id="login-msg"></p>
+  </div>
+
+  <!-- Gæt-form (vises efter login) -->
+  <div id="guess-div" style="display:none;">
+    <h2>Indtast dine gæt</h2>
+    <input type="number" id="guess1" placeholder="Gæt 1">
+    <input type="number" id="guess2" placeholder="Gæt 2">
+    <button id="submit-guess-btn">Send gæt</button>
+  </div>
+
+  <!-- Leaderboard -->
+  <div id="leaderboard-div" style="display:none;">
+    <h2>Leaderboard</h2>
+    <table border="1">
+      <thead>
+        <tr>
+          <th>Bruger</th>
+          <th>Point</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- Firebase opsætning -->
+<script src="firebase.js"></script>
+
+<script>
+// ===== LOGIN & OPRET BRUGER =====
+const loginDiv = document.getElementById('login-div');
+const guessDiv = document.getElementById('guess-div');
+const leaderboardDiv = document.getElementById('leaderboard-div');
+const loginMsg = document.getElementById('login-msg');
+
+document.getElementById('login-btn').addEventListener('click', () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  // Prøv at logge ind
+  auth.signInWithEmailAndPassword(email, password)
+    .then(userCredential => {
+      loginMsg.textContent = "Login succesfuldt!";
+      showGuessAndLeaderboard();
+    })
+    .catch(error => {
+      if(error.code === 'auth/user-not-found') {
+        // Opret bruger hvis ikke eksisterer
+        auth.createUserWithEmailAndPassword(email, password)
+          .then(userCredential => {
+            loginMsg.textContent = "Bruger oprettet og logget ind!";
+            showGuessAndLeaderboard();
+          })
+          .catch(err => { loginMsg.textContent = err.message; });
+      } else {
+        loginMsg.textContent = error.message;
+      }
+    });
+});
+
+// ===== VIS GÆT-FORM OG LEADERBOARD =====
+function showGuessAndLeaderboard() {
+  loginDiv.style.display = "none";
+  guessDiv.style.display = "block";
+  leaderboardDiv.style.display = "block";
+  loadLeaderboard();
+}
+
+// ===== SEND GÆT TIL FIRESTORE =====
+document.getElementById('submit-guess-btn').addEventListener('click', () => {
+  const guess1 = parseInt(document.getElementById('guess1').value);
+  const guess2 = parseInt(document.getElementById('guess2').value);
+
+  if(isNaN(guess1) || isNaN(guess2)) {
+    alert("Udfyld begge gæt!");
+    return;
+  }
+
+  const user = auth.currentUser;
+  db.collection('guesses').doc(user.uid).set({
+    email: user.email,
+    guess1: guess1,
+    guess2: guess2,
+    points: calculatePoints(guess1, guess2) // funktion kan defineres
+  }).then(() => {
+    alert("Gæt sendt!");
+    loadLeaderboard(); // opdater leaderboard
+  });
+});
+
+// ===== SIMPLE POINTBEREGNING =====
+function calculatePoints(guess1, guess2) {
+  // Her kan du definere regler for point
+  // For prototypen giver vi fx 1 point for hvert gæt over 50
+  let points = 0;
+  if(guess1 > 50) points += 1;
+  if(guess2 > 50) points += 1;
+  return points;
+}
+
+// ===== LOAD LEADERBOARD =====
+function loadLeaderboard() {
+  const tbody = document.getElementById('leaderboard-body');
+  tbody.innerHTML = ''; // ryd tidligere data
+
+  db.collection('guesses').orderBy('points', 'desc').get()
+    .then(snapshot => {
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${data.email}</td><td>${data.points}</td>`;
+        tbody.appendChild(tr);
+      });
+    });
+}
+</script>
+
+</body>
+</html>
+
 
 <main>
   <h1>Velkommen til Gæt-siden!</h1>
