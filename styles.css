@@ -9,3 +9,24 @@ footer{text-align:center;margin-top:1.5rem;color:#666}
 
 
 @media (max-width:600px){body{padding:1rem}main{padding:1rem}}
+
+/* Menu-bar styling */
+.menu-bar {
+  display: flex;
+  justify-content: center; /* Centrer menuen */
+  gap: 2rem;               /* Afstand mellem links */
+  background-color: #0366d6; 
+  padding: 1rem 0;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.menu-bar a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.menu-bar a:hover {
+  text-decoration: underline;
+}
