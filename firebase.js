@@ -8,4 +8,11 @@ const firebaseConfig = {
   measurementId: "G-B6YTNFRJPS"
 };
 
+// Initialiser Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Tilføj services
+const auth = firebase.auth();        // til login
+const analytics = getAnalytics(app);
+const db = firebase.firestore();     // til gæt og point
 
