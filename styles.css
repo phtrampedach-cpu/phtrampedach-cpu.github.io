@@ -15,18 +15,24 @@ footer{text-align:center;margin-top:1.5rem;color:#666}
   display: flex;
   justify-content: center; /* Centrer menuen */
   gap: 2rem;               /* Afstand mellem links */
-  background-color: #0366d6; 
+  background-color: #0366d6; /* Blå baggrund */
   padding: 1rem 0;
   border-radius: 8px;
   margin-bottom: 2rem;
 }
 
 .menu-bar a {
+  display: inline-block;
+  padding: 0.5rem 1rem;     /* Lidt luft omkring teksten */
+  background-color: #0366d6; /* Samme som menu-bar */
   color: white;
   text-decoration: none;
   font-weight: bold;
+  border-radius: 5px;       /* Runde hjørner som Kontakt */
+  transition: background-color 0.3s;
 }
 
 .menu-bar a:hover {
-  text-decoration: underline;
+  background-color: #024ea2; /* Mørkere blå ved hover */
 }
+
