@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Min første hjemmeside</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+<nav>
+<a href="#">Forside</a>
+<a href="#om">Om</a>
+<a href="#kontakt">Kontakt</a>
+</nav>
+</header>
+
+
+<main>
+<h1>Hej — velkommen til min hjemmeside</h1>
+<p>Dette er en simpel side hostet gratis på GitHub Pages.</p>
+
+
+<section id="om">
+<h2>Om mig</h2>
+<p>Skriv lidt om dig selv her.</p>
+</section>
+
+
+<section id="kontakt">
+<h2>Kontakt</h2>
+<p>Email: dig@eksempel.com</p>
+</section>
+</main>
+
+
+<footer>
+<p>© <span id="aar"></span> Dit Navn</p>
+</footer>
+
+
+<script>
+document.getElementById('aar').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>
