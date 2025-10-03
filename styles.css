@@ -36,3 +36,9 @@ footer{text-align:center;margin-top:1.5rem;color:#666}
   background-color: #024ea2; /* Mørkere blå ved hover */
 }
 
+/* Aktiv fane styling */
+.menu-bar a.active {
+  background-color: #024ea2; /* Mørkere blå end de andre faner */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
