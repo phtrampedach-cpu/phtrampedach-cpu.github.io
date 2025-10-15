@@ -36,17 +36,20 @@
   // ================================
   // Firebase setup
   // ================================
-  const firebaseConfig = {
-    apiKey: "DIN_API_KEY",
-    authDomain: "dit-projekt.firebaseapp.com",
-    projectId: "dit-projekt",
-    storageBucket: "dit-projekt.appspot.com",
-    messagingSenderId: "1234567890",
-    appId: "1:1234567890:web:abcdef123456"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+  measurementId: "G-B6YTNFRJPS"
+};
 
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
+ const auth = firebase.auth();        // til login
+ const analytics = getAnalytics(app);
+ const db = firebase.firestore();     // til gæt og point
 
   // ================================
   // Login / Opret bruger
