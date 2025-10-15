@@ -1,17 +1,17 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mit Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
   <link rel="stylesheet" href="styles.css">
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
+
 <header>
   <nav class="menu-bar">
     <a href="index.html">Forside</a>
@@ -23,36 +23,118 @@
 </header>
 
 <main>
-  <h1>Velkommen til dit Dashboard</h1>
-  <p id="welcome-text"></p>
-  <button id="logout-btn">Log ud</button>
+  <h1>Velkommen til Dashboard</h1>
+  <p id="user-info"></p>
+
+  <!-- FANEKNAPPER -->
+  <div class="tabs">
+    <button class="tab-btn" id="btn-resultat">Gæt på resultat</button>
+    <button class="tab-btn" id="btn-tilskuertal">Gæt på tilskuertal</button>
+    <button class="tab-btn logout" id="btn-logout">Log ud</button>
+  </div>
+
+  <!-- Indholdsområde: her skifter teksten alt efter fanen -->
+  <section id="content-area">
+    <p>Vælg en fane for at begynde.</p>
+  </section>
 </main>
 
 <script>
-  // ===== Firebase config (brug samme som i gaet1.html) =====
-  const firebaseConfig = {
-    /* --- INDSÆT DIN firebaseConfig HER --- */
-  };
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
+  /* ================================
+     Firebase setup
+     (Brug samme config som i gaet.html)
+  ================================== */
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+  measurementId: "G-B6YTNFRJPS"
+};
 
-  // Tjek om bruger er logget ind
+
+  firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();        // til login
+const analytics = getAnalytics(app);
+const db = firebase.firestore();     // til gæt og point
+
+  const userInfo = document.getElementById('user-info');
+  const contentArea = document.getElementById('content-area');
+
+  // ===== Tjek om bruger er logget ind =====
   auth.onAuthStateChanged(user => {
     if (user) {
-      document.getElementById('welcome-text').textContent =
-        `Du er logget ind som ${user.email}`;
+      userInfo.textContent = "Du er logget ind som: " + user.email;
     } else {
-      // Hvis ingen bruger er logget ind, send tilbage til login
+      // Hvis ingen bruger → tilbage til login
       window.location.href = "gaet.html";
     }
   });
 
-  // Logout
-  document.getElementById('logout-btn').addEventListener('click', () => {
+  // ===== Faner / knapper =====
+  document.getElementById('btn-resultat').addEventListener('click', () => {
+    contentArea.innerHTML = `
+      <h2>Gæt på resultat</h2>
+      <p>Her kan du senere indtaste dine gæt på kampresultater.</p>
+    `;
+  });
+
+  document.getElementById('btn-tilskuertal').addEventListener('click', () => {
+    contentArea.innerHTML = `
+      <h2>Gæt på tilskuertal</h2>
+      <p>Her kan du senere indtaste dine gæt på tilskuertal for kampene.</p>
+    `;
+  });
+
+  // ===== Log ud =====
+  document.getElementById('btn-logout').addEventListener('click', () => {
     auth.signOut().then(() => {
       window.location.href = "gaet.html";
     });
   });
 </script>
+
+<style>
+  /* Du kan flytte dette til styles.css senere */
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #fafafa;
+    padding: 20px;
+  }
+  main {
+    max-width: 700px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+  }
+  .tabs {
+    margin: 20px 0;
+  }
+  .tab-btn {
+    padding: 10px 20px;
+    margin-right: 10px;
+    border: none;
+    border-radius: 6px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .tab-btn:hover {
+    background-color: #0056b3;
+  }
+  .logout {
+    background-color: #dc3545;
+  }
+  .logout:hover {
+    background-color: #a71d2a;
+  }
+</style>
+
 </body>
 </html>
+
