@@ -33,25 +33,24 @@
 </main>
 
 <script>
-  /* ================================
-     Firebase setup
-     Udskift config herunder med din egen firebaseConfig
-     (fra Firebase Console)
-  ================================== */
-const firebaseConfig = {
-  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
-  authDomain: "trampestips.firebaseapp.com",
-  projectId: "trampestips",
-  storageBucket: "trampestips.firebasestorage.app",
-  messagingSenderId: "759235788489",
-  appId: "1:759235788489:web:9515bc438a7c7d68469718",
-  measurementId: "G-B6YTNFRJPS"
-};
+  // ================================
+  // Firebase setup
+  // ================================
+  const firebaseConfig = {
+    apiKey: "DIN_API_KEY",
+    authDomain: "dit-projekt.firebaseapp.com",
+    projectId: "dit-projekt",
+    storageBucket: "dit-projekt.appspot.com",
+    messagingSenderId: "1234567890",
+    appId: "1:1234567890:web:abcdef123456"
+  };
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
 
+  // ================================
   // Login / Opret bruger
+  // ================================
   document.getElementById("login-btn").addEventListener("click", () => {
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
@@ -61,35 +60,59 @@ const firebaseConfig = {
       return;
     }
 
-    // Forsøg at logge ind
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
         document.getElementById("login-msg").textContent = "Login succesfuldt!";
-        // Send brugeren videre til dashboard.html
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 800);
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
       })
       .catch(error => {
-        // Hvis brugeren ikke findes, opret ny
-        if (error.code === "auth/user-not-found") {
-          auth.createUserWithEmailAndPassword(email, password)
-            .then(() => {
-              document.getElementById("login-msg").textContent = "Bruger oprettet! Logger ind...";
-              setTimeout(() => {
-                window.location.href = "dashboard.html";
-              }, 800);
-            })
-            .catch(err => {
-              document.getElementById("login-msg").textContent = "Fejl ved oprettelse: " + err.message;
-            });
-        } else {
-          document.getElementById("login-msg").textContent = "Fejl: " + error.message;
+        switch(error.code) {
+          case "auth/user-not-found":
+            // Opret ny bruger
+            auth.createUserWithEmailAndPassword(email, password)
+              .then(() => {
+                document.getElementById("login-msg").textContent = "Bruger oprettet! Logger ind...";
+                setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
+              })
+              .catch(err => {
+                // Håndter fejl ved oprettelse
+                switch(err.code) {
+                  case "auth/email-already-in-use":
+                    document.getElementById("login-msg").textContent = "Denne email er allerede i brug!";
+                    break;
+                  case "auth/invalid-email":
+                    document.getElementById("login-msg").textContent = "Ugyldig email!";
+                    break;
+                  case "auth/weak-password":
+                    document.getElementById("login-msg").textContent = "Adgangskode skal være mindst 6 tegn!";
+                    break;
+                  default:
+                    document.getElementById("login-msg").textContent = "Fejl ved oprettelse: " + err.message;
+                }
+              });
+            break;
+
+          case "auth/wrong-password":
+            document.getElementById("login-msg").textContent = "Forkert adgangskode!";
+            break;
+
+          case "auth/invalid-email":
+            document.getElementById("login-msg").textContent = "Ugyldig email!";
+            break;
+
+          case "auth/invalid-login-credentials":
+            document.getElementById("login-msg").textContent = "Email eller adgangskode er forkert!";
+            break;
+
+          default:
+            document.getElementById("login-msg").textContent = "Fejl: " + error.message;
         }
       });
   });
 
+  // ================================
   // Hvis bruger allerede er logget ind → send direkte videre
+  // ================================
   auth.onAuthStateChanged(user => {
     if (user) {
       window.location.href = "dashboard.html";
@@ -97,5 +120,3 @@ const firebaseConfig = {
   });
 </script>
 
-</body>
-</html>
