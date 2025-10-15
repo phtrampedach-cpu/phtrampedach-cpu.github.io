@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mit Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+<header>
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="about.html">Om mig</a>
+    <a href="gaet.html">Gæt</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="contact.html">Kontakt</a>
+  </nav>
+</header>
+
+<main>
+  <h1>Velkommen til dit Dashboard</h1>
+  <p id="welcome-text"></p>
+  <button id="logout-btn">Log ud</button>
+</main>
+
+<script>
+  // ===== Firebase config (brug samme som i gaet1.html) =====
+  const firebaseConfig = {
+    /* --- INDSÆT DIN firebaseConfig HER --- */
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+
+  // Tjek om bruger er logget ind
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById('welcome-text').textContent =
+        `Du er logget ind som ${user.email}`;
+    } else {
+      // Hvis ingen bruger er logget ind, send tilbage til login
+      window.location.href = "gaet.html";
+    }
+  });
+
+  // Logout
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    auth.signOut().then(() => {
+      window.location.href = "gaet.html";
+    });
+  });
+</script>
+</body>
+</html>
