@@ -1,83 +1,86 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gæt på kampene</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.tailwindcss.com"></script> <!-- hvis du bruger Tailwind -->
+</head>
+<body>
+
+<header>
+<nav class="menu-bar">
+  <a href="index.html">Forside</a>
+  <a href="gaet.html">Dashboard</a>
+  <a href="contact.html" >Kontakt</a>
+</nav>
+</header
+
+<main class="max-w-3xl mx-auto p-4">
+  <h1 class="text-3xl font-bold mb-6">Gæt på resultat</h1>
+
+  <!-- Dette er containeren, hvor kampkortene indsættes -->
+  <div id="content-area"></div>
+</main>
+
 <script>
-  // Eksempel på kampdata
+  // Dit dynamiske kampkort-script her
   const kampe = [
-    {
-      hjemmehold: "Danmark",
-      hjemmeFlag: "Danmark.png",
-      udehold: "Tyskland",
-      udeFlag: "Tyskland.png",
-      dato: "20/11",
-      tid: "18:00"
-    },
-    {
-      hjemmehold: "Frankrig",
-      hjemmeFlag: "france.png",
-      udehold: "Italien",
-      udeFlag: "italy.png",
-      dato: "21/11",
-      tid: "20:00"
-    },
-    {
-      hjemmehold: "Spanien",
-      hjemmeFlag: "spain.png",
-      udehold: "Portugal",
-      udeFlag: "portugal.png",
-      dato: "22/11",
-      tid: "18:00"
-    }
+    { hjemmehold: "Danmark", hjemmeFlag: "danmark.png", udehold: "Tyskland", udeFlag: "tyskland.png", dato: "20/11", tid: "18:00" },
+    { hjemmehold: "Frankrig", hjemmeFlag: "france.png", udehold: "Italien", udeFlag: "italy.png", dato: "21/11", tid: "20:00" },
+    { hjemmehold: "Spanien", hjemmeFlag: "spain.png", udehold: "Portugal", udeFlag: "portugal.png", dato: "22/11", tid: "18:00" }
   ];
 
-  document.getElementById('btn-resultat').addEventListener('click', () => {
-    const contentArea = document.getElementById('content-area');
-    contentArea.innerHTML = `<h2 class="text-2xl font-bold mb-4">Gæt på resultat</h2>`;
+  const contentArea = document.getElementById('content-area');
 
-    kampe.forEach((kamp, index) => {
-      const kampDiv = document.createElement('div');
-      kampDiv.classList.add('bg-white', 'shadow-md', 'rounded-lg', 'p-4', 'mb-4', 'flex', 'flex-col', 'md:flex-row', 'md:items-center', 'md:justify-between', 'gap-4');
-      kampDiv.innerHTML = `
-        <div class="flex items-center gap-4">
-          <div class="flex items-center gap-2">
-            <img src="${kamp.hjemmeFlag}" alt="${kamp.hjemmehold} flag" class="w-8 h-8">
-            <span class="font-semibold">${kamp.hjemmehold}</span>
-          </div>
-          <span class="font-bold text-xl">vs</span>
-          <div class="flex items-center gap-2">
-            <img src="${kamp.udeFlag}" alt="${kamp.udehold} flag" class="w-8 h-8">
-            <span class="font-semibold">${kamp.udehold}</span>
-          </div>
+  kampe.forEach((kamp, index) => {
+    const kampDiv = document.createElement('div');
+    kampDiv.classList.add('bg-white', 'shadow-md', 'rounded-lg', 'p-4', 'mb-4', 'flex', 'flex-col', 'md:flex-row', 'md:items-center', 'md:justify-between', 'gap-4');
+    kampDiv.innerHTML = `
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="${kamp.hjemmeFlag}" alt="${kamp.hjemmehold} flag" class="w-8 h-8">
+          <span class="font-semibold">${kamp.hjemmehold}</span>
         </div>
-
-        <div class="flex gap-2 choice-container" data-index="${index}">
-          <button class="choice-btn px-4 py-1 rounded border" data-choice="home">Hjemme</button>
-          <button class="choice-btn px-4 py-1 rounded border" data-choice="draw">Uafgjort</button>
-          <button class="choice-btn px-4 py-1 rounded border" data-choice="away">Ude</button>
+        <span class="font-bold text-xl">vs</span>
+        <div class="flex items-center gap-2">
+          <img src="${kamp.udeFlag}" alt="${kamp.udehold} flag" class="w-8 h-8">
+          <span class="font-semibold">${kamp.udehold}</span>
         </div>
+      </div>
 
-        <div class="text-gray-500 text-sm">
-          ${kamp.dato} ${kamp.tid}
-        </div>
-      `;
-      contentArea.appendChild(kampDiv);
-    });
+      <div class="flex gap-2 choice-container" data-index="${index}">
+        <button class="choice-btn px-4 py-1 rounded border" data-choice="home">Hjemme</button>
+        <button class="choice-btn px-4 py-1 rounded border" data-choice="draw">Uafgjort</button>
+        <button class="choice-btn px-4 py-1 rounded border" data-choice="away">Ude</button>
+      </div>
 
-    // Gem-knap
-    const gemBtn = document.createElement('button');
-    gemBtn.classList.add('mt-4', 'w-full', 'bg-blue-600', 'text-white', 'font-semibold', 'py-2', 'rounded', 'hover:bg-blue-700');
-    gemBtn.textContent = "Gem gæt";
-    contentArea.appendChild(gemBtn);
+      <div class="text-gray-500 text-sm">
+        ${kamp.dato} ${kamp.tid}
+      </div>
+    `;
+    contentArea.appendChild(kampDiv);
+  });
 
-    // Interaktivitet for udfaldsknapper
-    const allButtons = contentArea.querySelectorAll('.choice-btn');
-    allButtons.forEach(button => {
-      button.addEventListener('click', () => {
-        const parent = button.parentElement;
-        parent.querySelectorAll('.choice-btn').forEach(btn => {
-          btn.classList.remove('bg-blue-600', 'text-white');
-          btn.classList.add('border');
-        });
-        button.classList.add('bg-blue-600', 'text-white');
-        button.classList.remove('border');
+  const gemBtn = document.createElement('button');
+  gemBtn.classList.add('mt-4', 'w-full', 'bg-blue-600', 'text-white', 'font-semibold', 'py-2', 'rounded', 'hover:bg-blue-700');
+  gemBtn.textContent = "Gem gæt";
+  contentArea.appendChild(gemBtn);
+
+  const allButtons = contentArea.querySelectorAll('.choice-btn');
+  allButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const parent = button.parentElement;
+      parent.querySelectorAll('.choice-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('border');
       });
+      button.classList.add('bg-blue-600', 'text-white');
+      button.classList.remove('border');
     });
   });
 </script>
+
+</body>
+</html>
