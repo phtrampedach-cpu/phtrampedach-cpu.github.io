@@ -9,6 +9,8 @@
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-analytics-compat.js"></script>
 </head>
 <body>
 
@@ -31,38 +33,34 @@
     <button class="tab-btn logout" id="btn-logout">Log ud</button>
   </div>
 
-  <!-- Indholdsområde: her skifter teksten alt efter fanen -->
+  <!-- Indholdsområde -->
   <section id="content-area">
     <p>Vælg en fane for at begynde.</p>
   </section>
 </main>
 
 <script>
-  /* ================================
-     Firebase setup
-     (Brug samme config som i gaet.html)
-  ================================== */
-const firebaseConfig = {
-  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
-  authDomain: "trampestips.firebaseapp.com",
-  projectId: "trampestips",
-  storageBucket: "trampestips.firebasestorage.app",
-  messagingSenderId: "759235788489",
-  appId: "1:759235788489:web:9515bc438a7c7d68469718",
-  measurementId: "G-B6YTNFRJPS"
-};
+  // ================================
+  // Firebase setup
+  // ================================
+  const firebaseConfig = {
+    apiKey: "xxx", 
+    authDomain: "trampestips.firebaseapp.com",
+    projectId: "trampestips",
+    storageBucket: "trampestips.firebasestorage.app",
+    messagingSenderId: "759235788489",
+    appId: "1:759235788489:web:9515bc438a7c7d68469718",
+    measurementId: "G-B6YTNFRJPS"
+  };
 
-
-  firebase.initializeApp(firebaseConfig);
-const app = firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();// til login
-const analytics = firebase.analytics(app);  // IKKE getAnalytics()
-const db = firebase.firestore(); // til gæt og point
-
-  const userInfo = document.getElementById('user-info');
-  const contentArea = document.getElementById('content-area');
+  // Initialiser app
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const analytics = firebase.analytics(app); // korrekt compat
+  const db = firebase.firestore();
 
   // ===== Tjek om bruger er logget ind =====
+  const userInfo = document.getElementById('user-info');
   auth.onAuthStateChanged(user => {
     if (user) {
       userInfo.textContent = "Du er logget ind som: " + user.email;
@@ -73,6 +71,7 @@ const db = firebase.firestore(); // til gæt og point
   });
 
   // ===== Faner / knapper =====
+  const contentArea = document.getElementById('content-area');
   document.getElementById('btn-resultat').addEventListener('click', () => {
     contentArea.innerHTML = `
       <h2>Gæt på resultat</h2>
@@ -96,7 +95,7 @@ const db = firebase.firestore(); // til gæt og point
 </script>
 
 <style>
-  /* Du kan flytte dette til styles.css senere */
+  /* Du kan flytte dette til styles.css */
   body {
     font-family: Arial, sans-serif;
     background-color: #fafafa;
@@ -136,4 +135,3 @@ const db = firebase.firestore(); // til gæt og point
 
 </body>
 </html>
-
