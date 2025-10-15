@@ -12,8 +12,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 
 // Tilføj services
-const auth = firebase.auth();        // til login
-const analytics = getAnalytics(app);
-const db = firebase.firestore();     // til gæt og point
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth(); // til login
+const analytics = firebase.analytics(app);
+const db = firebase.firestore(); // til gæt og point
+  
 
 
