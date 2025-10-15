@@ -1,0 +1,83 @@
+<script>
+  // Eksempel på kampdata
+  const kampe = [
+    {
+      hjemmehold: "Danmark",
+      hjemmeFlag: "Danmark.png",
+      udehold: "Tyskland",
+      udeFlag: "Tyskland.png",
+      dato: "20/11",
+      tid: "18:00"
+    },
+    {
+      hjemmehold: "Frankrig",
+      hjemmeFlag: "france.png",
+      udehold: "Italien",
+      udeFlag: "italy.png",
+      dato: "21/11",
+      tid: "20:00"
+    },
+    {
+      hjemmehold: "Spanien",
+      hjemmeFlag: "spain.png",
+      udehold: "Portugal",
+      udeFlag: "portugal.png",
+      dato: "22/11",
+      tid: "18:00"
+    }
+  ];
+
+  document.getElementById('btn-resultat').addEventListener('click', () => {
+    const contentArea = document.getElementById('content-area');
+    contentArea.innerHTML = `<h2 class="text-2xl font-bold mb-4">Gæt på resultat</h2>`;
+
+    kampe.forEach((kamp, index) => {
+      const kampDiv = document.createElement('div');
+      kampDiv.classList.add('bg-white', 'shadow-md', 'rounded-lg', 'p-4', 'mb-4', 'flex', 'flex-col', 'md:flex-row', 'md:items-center', 'md:justify-between', 'gap-4');
+      kampDiv.innerHTML = `
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <img src="${kamp.hjemmeFlag}" alt="${kamp.hjemmehold} flag" class="w-8 h-8">
+            <span class="font-semibold">${kamp.hjemmehold}</span>
+          </div>
+          <span class="font-bold text-xl">vs</span>
+          <div class="flex items-center gap-2">
+            <img src="${kamp.udeFlag}" alt="${kamp.udehold} flag" class="w-8 h-8">
+            <span class="font-semibold">${kamp.udehold}</span>
+          </div>
+        </div>
+
+        <div class="flex gap-2 choice-container" data-index="${index}">
+          <button class="choice-btn px-4 py-1 rounded border" data-choice="home">Hjemme</button>
+          <button class="choice-btn px-4 py-1 rounded border" data-choice="draw">Uafgjort</button>
+          <button class="choice-btn px-4 py-1 rounded border" data-choice="away">Ude</button>
+        </div>
+
+        <div class="text-gray-500 text-sm">
+          ${kamp.dato} ${kamp.tid}
+        </div>
+      `;
+      contentArea.appendChild(kampDiv);
+    });
+
+    // Gem-knap
+    const gemBtn = document.createElement('button');
+    gemBtn.classList.add('mt-4', 'w-full', 'bg-blue-600', 'text-white', 'font-semibold', 'py-2', 'rounded', 'hover:bg-blue-700');
+    gemBtn.textContent = "Gem gæt";
+    contentArea.appendChild(gemBtn);
+
+    // Interaktivitet for udfaldsknapper
+    const allButtons = contentArea.querySelectorAll('.choice-btn');
+    allButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const parent = button.parentElement;
+        parent.querySelectorAll('.choice-btn').forEach(btn => {
+          btn.classList.remove('bg-blue-600', 'text-white');
+          btn.classList.add('border');
+        });
+        button.classList.add('bg-blue-600', 'text-white');
+        button.classList.remove('border');
+      });
+    });
+  });
+</script>
