@@ -1,11 +1,12 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gæt</title>
   <link rel="stylesheet" href="styles.css">
-  <!-- Firebase CDN -->
+
+  <!-- Firebase compat SDK (brug compat, som matcher eksemplerne vi brugte) -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -24,128 +25,309 @@
 <main>
   <h1>Gæt & Leaderboard</h1>
 
-  <!-- Login form -->
-  <div id="login-div">
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button id="login-btn">Login / Opret bruger</button>
-    <p id="login-msg"></p>
+  <!-- ===== LOGIN / OPRET-BRUGER ===== -->
+  <!-- Dette vises hvis man ikke er logget ind -->
+  <div id="login-section">
+    <h2>Login / Opret bruger</h2>
+
+    <!-- Inputfelter -->
+    <input type="email" id="email" placeholder="Email (fx navn@eksempel.dk)" />
+    <input type="password" id="password" placeholder="Adgangskode" />
+
+    <!-- Klik på knap forsøger først login, hvis brugeren ikke findes oprettes den -->
+    <button id="login-btn">Login / Opret</button>
+
+    <!-- Feedback til brugeren -->
+    <p id="login-msg" aria-live="polite"></p>
   </div>
 
-  <!-- Gæt-form (vises efter login) -->
-  <div id="guess-div" style="display:none;">
-    <h2>Indtast dine gæt</h2>
-    <input type="number" id="guess1" placeholder="Gæt 1">
-    <input type="number" id="guess2" placeholder="Gæt 2">
-    <button id="submit-guess-btn">Send gæt</button>
+  <!-- ===== DASHBOARD (vises efter login) ===== -->
+  <div id="dashboard" style="display:none;">
+    <h2 id="welcome-titel">Velkommen!</h2>
+    <p>Du er logget ind som: <span id="user-email"></span></p>
+
+    <!-- Hurtignavigation i dashboard -->
+    <div style="margin-bottom:1rem;">
+      <button id="btn-guess">Gæt på resultater</button>
+      <button id="btn-audience">Gæt tilskuertal</button>
+      <button id="btn-leaderboard">Se stilling</button>
+      <button id="btn-logout" style="margin-left:1rem;">Log ud</button>
+    </div>
+
+    <!-- Indholdsområde: formularer og leaderboard indsættes her dynamisk -->
+    <div id="content-area"></div>
   </div>
 
-  <!-- Leaderboard -->
-  <div id="leaderboard-div" style="display:none;">
-    <h2>Leaderboard</h2>
-    <table border="1">
-      <thead>
-        <tr>
-          <th>Bruger</th>
-          <th>Point</th>
-        </tr>
-      </thead>
-      <tbody id="leaderboard-body"></tbody>
-    </table>
-  </div>
 </main>
 
-<!-- Firebase opsætning -->
-<script src="firebase.js"></script>
+<!-- ===== Firebase-konfiguration =====
+     Udskift nedenstående placeholder med din egen firebaseConfig fra Firebase Console.
+     Eksempel (udskift med dine værdier):
+     const firebaseConfig = {
+       apiKey: "ABC...",
+       authDomain: "dit-projekt-id.firebaseapp.com",
+       projectId: "dit-projekt-id",
+       storageBucket: "dit-projekt-id.appspot.com",
+       messagingSenderId: "123456789",
+       appId: "1:123:web:abcdef"
+     };
+============================================= -->
 
 <script>
-// ===== LOGIN & OPRET BRUGER =====
-const loginDiv = document.getElementById('login-div');
-const guessDiv = document.getElementById('guess-div');
-const leaderboardDiv = document.getElementById('leaderboard-div');
-const loginMsg = document.getElementById('login-msg');
+  // ======== Indsæt din firebaseConfig her (erstat objektet) ========
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+  measurementId: "G-B6YTNFRJPS"
+};
 
-document.getElementById('login-btn').addEventListener('click', () => {
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
 
-  // Prøv at logge ind
-  auth.signInWithEmailAndPassword(email, password)
-    .then(userCredential => {
-      loginMsg.textContent = "Login succesfuldt!";
-      showGuessAndLeaderboard();
-    })
-    .catch(error => {
-      if(error.code === 'auth/user-not-found') {
-        // Opret bruger hvis ikke eksisterer
-        auth.createUserWithEmailAndPassword(email, password)
-          .then(userCredential => {
-            loginMsg.textContent = "Bruger oprettet og logget ind!";
-            showGuessAndLeaderboard();
-          })
-          .catch(err => { loginMsg.textContent = err.message; });
-      } else {
-        loginMsg.textContent = error.message;
-      }
+  // Initialiser Firebase
+  firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();        // til login
+const analytics = getAnalytics(app);
+const db = firebase.firestore();     // til gæt og point
+
+   // ======== Helper: DOM-elementer ========
+  const loginSection = document.getElementById('login-section');
+  const loginBtn = document.getElementById('login-btn');
+  const loginMsg = document.getElementById('login-msg');
+  const dashboard = document.getElementById('dashboard');
+  const userEmailSpan = document.getElementById('user-email');
+  const contentArea = document.getElementById('content-area');
+
+  const btnGuess = document.getElementById('btn-guess');
+  const btnAudience = document.getElementById('btn-audience');
+  const btnLeaderboard = document.getElementById('btn-leaderboard');
+  const btnLogout = document.getElementById('btn-logout');
+
+  // ======== Auth: login / opret bruger ========
+  loginBtn.addEventListener('click', () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      loginMsg.textContent = "Indtast både email og adgangskode.";
+      return;
+    }
+
+    // Forsøg at logge ind
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        // Login lykkedes - resten håndteres i onAuthStateChanged
+        loginMsg.textContent = "";
+      })
+      .catch(error => {
+        // Hvis bruger ikke findes - opret bruger
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+          auth.createUserWithEmailAndPassword(email, password)
+            .then(() => {
+              loginMsg.textContent = "Bruger oprettet og logget ind!";
+            })
+            .catch(err => {
+              loginMsg.textContent = "Fejl ved oprettelse: " + err.message;
+            });
+        } else {
+          loginMsg.textContent = "Login-fejl: " + error.message;
+        }
+      });
+  });
+
+  // ======== Auth state observer: vise dashboard når brugeren er logget ind ========
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      // Bruger er logget ind -> vis dashboard
+      loginSection.style.display = "none";
+      dashboard.style.display = "block";
+      userEmailSpan.textContent = user.email || "(ukendt email)";
+
+      // Standardvisning: leaderboard
+      renderLeaderboard();
+    } else {
+      // Ingen bruger -> vis login-sektion
+      dashboard.style.display = "none";
+      loginSection.style.display = "block";
+      contentArea.innerHTML = ""; // ryd content area
+    }
+  });
+
+  // ======== Logout ========
+  btnLogout.addEventListener('click', () => {
+    auth.signOut().then(() => {
+      // Efter logout kommer onAuthStateChanged til at vise login
     });
-});
+  });
 
-// ===== VIS GÆT-FORM OG LEADERBOARD =====
-function showGuessAndLeaderboard() {
-  loginDiv.style.display = "none";
-  guessDiv.style.display = "block";
-  leaderboardDiv.style.display = "block";
-  loadLeaderboard();
-}
+  // ======== Dashboard knapper ========
+  btnGuess.addEventListener('click', showGuessForm);
+  btnAudience.addEventListener('click', showAudienceForm);
+  btnLeaderboard.addEventListener('click', renderLeaderboard);
 
-// ===== SEND GÆT TIL FIRESTORE =====
-document.getElementById('submit-guess-btn').addEventListener('click', () => {
-  const guess1 = parseInt(document.getElementById('guess1').value);
-  const guess2 = parseInt(document.getElementById('guess2').value);
+  // ======== Funktion: vis formular til at gætte på resultater ========
+  function showGuessForm() {
+    contentArea.innerHTML = `
+      <h3>Gæt på resultater</h3>
+      <p>Indtast score for to kampe (fx 2-1 skriv 2 og 1 i hver boks). Hvis du kun vil bruge simple tal, kan du bruge hele tal.</p>
 
-  if(isNaN(guess1) || isNaN(guess2)) {
-    alert("Udfyld begge gæt!");
-    return;
+      <div>
+        <label>Kamp 1 - hold A mål: <input id="g1a" type="number" /></label>
+        <label> - hold B mål: <input id="g1b" type="number" /></label>
+      </div>
+      <div style="margin-top:0.5rem;">
+        <label>Kamp 2 - hold A mål: <input id="g2a" type="number" /></label>
+        <label> - hold B mål: <input id="g2b" type="number" /></label>
+      </div>
+
+      <div style="margin-top:1rem;">
+        <button id="save-guess-btn">Gem gæt</button>
+        <span id="save-msg" style="margin-left:1rem;color:green"></span>
+      </div>
+    `;
+
+    document.getElementById('save-guess-btn').addEventListener('click', () => {
+      submitMatchGuesses();
+    });
   }
 
-  const user = auth.currentUser;
-  db.collection('guesses').doc(user.uid).set({
-    email: user.email,
-    guess1: guess1,
-    guess2: guess2,
-    points: calculatePoints(guess1, guess2) // funktion kan defineres
-  }).then(() => {
-    alert("Gæt sendt!");
-    loadLeaderboard(); // opdater leaderboard
-  });
-});
+  // ======== Funktion: vis formular til at gætte tilskuertal ========
+  function showAudienceForm() {
+    contentArea.innerHTML = `
+      <h3>Gæt tilskuertal</h3>
+      <p>Indtast dit gæt på tilskuertal for en kamp.</p>
+      <div>
+        <label>Tilskuertal: <input id="aud-guess" type="number" /></label>
+      </div>
+      <div style="margin-top:1rem;">
+        <button id="save-aud-btn">Gem tilskuer-gæt</button>
+        <span id="aud-msg" style="margin-left:1rem;color:green"></span>
+      </div>
+    `;
 
-// ===== SIMPLE POINTBEREGNING =====
-function calculatePoints(guess1, guess2) {
-  // Her kan du definere regler for point
-  // For prototypen giver vi fx 1 point for hvert gæt over 50
-  let points = 0;
-  if(guess1 > 50) points += 1;
-  if(guess2 > 50) points += 1;
-  return points;
-}
-
-// ===== LOAD LEADERBOARD =====
-function loadLeaderboard() {
-  const tbody = document.getElementById('leaderboard-body');
-  tbody.innerHTML = ''; // ryd tidligere data
-
-  db.collection('guesses').orderBy('points', 'desc').get()
-    .then(snapshot => {
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${data.email}</td><td>${data.points}</td>`;
-        tbody.appendChild(tr);
-      });
+    document.getElementById('save-aud-btn').addEventListener('click', () => {
+      submitAudienceGuess();
     });
-}
+  }
+
+  // ======== Gem match-gæt i Firestore ========
+  function submitMatchGuesses() {
+    const g1a = parseInt(document.getElementById('g1a').value, 10);
+    const g1b = parseInt(document.getElementById('g1b').value, 10);
+    const g2a = parseInt(document.getElementById('g2a').value, 10);
+    const g2b = parseInt(document.getElementById('g2b').value, 10);
+
+    if ([g1a, g1b, g2a, g2b].some(v => isNaN(v))) {
+      alert("Udfyld alle gæt med tal.");
+      return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) { alert("Du er ikke logget ind."); return; }
+
+    // Gem under collection 'guesses' - hvert dokument id = brugerens uid
+    db.collection('guesses').doc(user.uid).set({
+      email: user.email,
+      matchGuesses: {
+        match1: { a: g1a, b: g1b },
+        match2: { a: g2a, b: g2b }
+      },
+      // points kan opdateres senere af en funktion der beregner rigtige resultater
+      points: firebase.firestore.FieldValue.serverTimestamp() // midlertidigt - kan erstattes
+    }, { merge: true })
+    .then(() => {
+      document.getElementById('save-msg').textContent = "Gæt gemt!";
+      // Efter gem, opdatér leaderboard (hvis point opdateres senere)
+      setTimeout(()=>{ renderLeaderboard(); }, 500);
+    })
+    .catch(err => {
+      alert("Fejl ved gem: " + err.message);
+    });
+  }
+
+  // ======== Gem tilskuer-gæt i Firestore ========
+  function submitAudienceGuess() {
+    const aud = parseInt(document.getElementById('aud-guess').value, 10);
+    if (isNaN(aud)) { alert("Skriv et tal for tilskuertal."); return; }
+    const user = auth.currentUser;
+    if (!user) { alert("Du er ikke logget ind."); return; }
+
+    db.collection('guesses').doc(user.uid).set({
+      email: user.email,
+      audienceGuess: aud,
+      points: firebase.firestore.FieldValue.serverTimestamp() // placeholder
+    }, { merge: true })
+    .then(() => {
+      document.getElementById('aud-msg').textContent = "Tilskuer-gæt gemt!";
+      setTimeout(()=>{ renderLeaderboard(); }, 500);
+    })
+    .catch(err => alert("Fejl ved gem: " + err.message));
+  }
+
+  // ======== Simpel leaderboard: vis alle brugere og deres point ========
+  // Bemærk: point bør reelt være et tal. Her bruger vi et simpelt eksempel.
+  function renderLeaderboard() {
+    contentArea.innerHTML = `<h3>Leaderboard</h3><div id="board"></div>`;
+    const board = document.getElementById('board');
+
+    // Hent alle dokumenter i 'guesses' og sorter efter 'points' (antag point er tal)
+    db.collection('guesses').orderBy('points', 'desc').get()
+      .then(snapshot => {
+        if (snapshot.empty) {
+          board.innerHTML = "<p>Ingen gæt endnu.</p>";
+          return;
+        }
+        let html = `<table border="1" style="border-collapse:collapse;padding:6px;">
+                      <thead><tr><th>Bruger</th><th>Point</th><th>Gæt (kort)</th></tr></thead><tbody>`;
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          const points = (typeof d.points === 'number') ? d.points : '-';
+          // Kort opsummering af gæt
+          let guessSummary = '';
+          if (d.matchGuesses) {
+            const m1 = d.matchGuesses.match1;
+            const m2 = d.matchGuesses.match2;
+            guessSummary = `M1: ${m1.a}-${m1.b}, M2: ${m2.a}-${m2.b}`;
+          } else if (d.audienceGuess) {
+            guessSummary = `Tilskuertal: ${d.audienceGuess}`;
+          }
+          html += `<tr>
+                    <td>${d.email || 'Anonym'}</td>
+                    <td style="text-align:center">${points}</td>
+                    <td>${guessSummary}</td>
+                   </tr>`;
+        });
+        html += `</tbody></table>`;
+        board.innerHTML = html;
+
+        // Fremhæv den indloggede bruger (hvis til stede)
+        const current = auth.currentUser;
+        if (current) {
+          // Enkel fremhævning: find row med email == current.email og sæt baggrund
+          Array.from(board.querySelectorAll('tbody tr')).forEach(row => {
+            if (row.cells[0].textContent === current.email) {
+              row.style.background = '#fffbdd'; // lys fremhævning
+            }
+          });
+        }
+      })
+      .catch(err => {
+        board.innerHTML = "<p>Fejl ved hent af leaderboard: " + err.message + "</p>";
+      });
+  }
+
+  // ======== Note om point: ========
+  // I denne prototype bruger vi ikke en færdig pointberegning. Når
+  // de rigtige resultater foreligger, kan du køre en funktion (f.eks. via Cloud Function eller admin UI)
+  // der:
+  //  - henter hver brugers gæt
+  //  - sammenligner med de faktiske resultater
+  //  - beregner points (fx 3 for korrekt resultat, 1 for korrekt udfald osv.)
+  //  - opsætter field 'points' i hvert dokument som tal
+  // Leaderboard bliver derefter sorteret korrekt.
+
 </script>
 
 </body>
