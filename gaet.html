@@ -67,24 +67,39 @@ const db = firebase.firestore(); // til gæt og point
     }
 
     auth.signInWithEmailAndPassword(email, password)
-  .then(() => {
-    document.getElementById("login-msg").textContent = "Login succesfuldt!";
-    setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
-  })
-  .catch(error => {
-    // Hvis brugeren ikke findes eller login fejler pga. ugyldig kombination, prøv at oprette bruger
-    if (error.code === "auth/user-not-found" || error.code === "auth/invalid-login-credentials") {
-      auth.createUserWithEmailAndPassword(email, password)
-        .then(() => {
-          document.getElementById("login-msg").textContent = "Bruger oprettet! Logger ind...";
-          setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
-        })
-        .catch(err => {
-          document.getElementById("login-msg").textContent = "Fejl ved oprettelse: " + err.message;
-        });
-    } else {
-      document.getElementById("login-msg").textContent = "Fejl: " + error.message;
-    }
+      .then(() => {
+        document.getElementById("login-msg").textContent = "Login succesfuldt!";
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
+      })
+      .catch(error => {
+  // Hvis brugeren ikke findes eller login fejler pga. ugyldig kombination, prøv at oprette bruger
+  if (error.code === "auth/user-not-found" || error.code === "auth/invalid-login-credentials") {
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(() => {
+        document.getElementById("login-msg").textContent = "Bruger oprettet! Logger ind...";
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 800);
+      })
+      .catch(err => {
+        // Håndter fejl ved oprettelse
+        switch(err.code) {
+          case "auth/email-already-in-use":
+            document.getElementById("login-msg").textContent = "Denne email er allerede i brug!";
+            break;
+          case "auth/invalid-email":
+            document.getElementById("login-msg").textContent = "Ugyldig email!";
+            break;
+          case "auth/weak-password":
+            document.getElementById("login-msg").textContent = "Adgangskode skal være mindst 6 tegn!";
+            break;
+          default:
+            document.getElementById("login-msg").textContent = "Fejl ved oprettelse: " + err.message;
+        }
+      });
+  } else {
+    document.getElementById("login-msg").textContent = "Fejl: " + error.message;
+  }
+});
+
   });
 
   // ================================
