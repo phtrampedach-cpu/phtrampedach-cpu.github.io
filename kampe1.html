@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Gæt på kampene</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f7f7f7; padding:20px; }
+    main { max-width:900px; margin:0 auto; background:white; padding:20px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.06); }
+    h1{ font-size:22px; margin-bottom:12px }
+    .kamp { display:grid; grid-template-columns: 1fr auto auto auto; align-items:center;
+            gap:12px; padding:12px; border-radius:8px; background:#fff; border:1px solid #eee; margin-bottom:10px; }
+    .hold { display:flex; align-items:center; gap:8px; }
+    .hold img { width:28px; height:20px; object-fit:cover; border-radius:3px; }
+    .score-input { width:45px; padding:5px; text-align:center; border:1px solid #ccc; border-radius:5px; }
+    .locked { color:#a00; font-size:12px; display:flex; align-items:center; gap:4px; }
+    .points { font-weight:bold; text-align:center; }
+    .admin-result { background:#fafafa; padding:4px 6px; border-radius:5px; border:1px solid #ddd; }
+    #gemBtn { margin-top:12px; padding:10px 14px; width:100%; border-radius:8px; border:none;
+              background:#0b71d6; color:#fff; font-weight:600; cursor:pointer; }
+    #gemBtn:disabled { opacity:0.6; cursor:not-allowed; }
+    #sum-points { margin-top:10px; font-weight:bold; }
+  </style>
+</head>
+<body>
+
+<header>
+<nav class="menu-bar">
+  <a href="index.html">Forside</a>
+  <a href="gaet.html">Dashboard</a>
+  <a href="contact.html" >Kontakt</a>
+</nav>
+</header
+
+<main>
+  <h1>Gæt på resultat</h1>
+  <p>Du kan redigere dine gæt indtil 1 time før kampstart.</p>
+
+  <div id="kampe-container"></div>
+  <button id="gemBtn">Gem gæt</button>
+  <p id="sum-points"></p>
+</main>
+
+<script>
+/* =======================
+   KONFIGURATION
+   ======================= */
+const pointsConfig = {
+  exactScore: 3,       // korrekt målscore
+  correctOutcome: 1,   // korrekt udfald men forkert målscore
+  wrong: 0
+};
+const ADMIN_EMAIL = "P.H.Trampedach@gmail.com"; // bruges kun til at vise adminfelter
+
+// 🔹 TODO: tilføj dine Firebase-init og auth her
+// fx const app = firebase.initializeApp(firebaseConfig);
+// const auth = firebase.auth();
+// const db = firebase.firestore();
+
+/* =======================
+   KAMPE (kan udvides frit)
+   ======================= */
+const kampe = [
+  { id:"match1", hjemmehold:"Danmark", hjemmeFlag:"home-flag.png", udehold:"Tyskland", udeFlag:"away-flag.png", start:"2025-11-20T18:00:00" },
+  { id:"match2", hjemmehold:"Frankrig", hjemmeFlag:"france.png", udehold:"Italien", udeFlag:"italy.png", start:"2025-11-21T20:00:00" },
+  { id:"match3", hjemmehold:"Spanien", hjemmeFlag:"spain.png", udehold:"Portugal", udeFlag:"portugal.png", start:"2025-11-22T18:00:00" }
+];
+
+// 🔹 TODO: hent brugerens email fra login-system
+const currentUserEmail = "test@demo.dk"; // <--- erstattes med auth.currentUser.email
+const isAdmin = (currentUserEmail === ADMIN_EMAIL);
+
+/* =======================
+   RENDER
+   ======================= */
+const container = document.getElementById("kampe-container");
+let guesses = {};   // gemmer brugerens gæt
+let results = {};   // gemmer faktiske resultater (admin)
+
+function renderKampe(){
+  container.innerHTML = "";
+  let totalPoints = 0;
+  const now = new Date();
+
+  kampe.forEach(k => {
+    const start = new Date(k.start);
+    const cutoff = new Date(start.getTime() - 60*60*1000);
+    const locked = now > cutoff;
+
+    // eksisterende data
+    const g = guesses[k.id] || {homeGoals:"", awayGoals:""};
+    const r = results[k.id] || {homeGoals:"", awayGoals:""};
+
+    // beregn point hvis der findes resultat
+    let pts = "";
+    if(r.homeGoals !== "" && r.awayGoals !== "" && g.homeGoals !== "" && g.awayGoals !== ""){
+      const resOutcome = outcome(r.homeGoals, r.awayGoals);
+      const guessOutcome = outcome(g.homeGoals, g.awayGoals);
+      if(r.homeGoals == g.homeGoals && r.awayGoals == g.awayGoals) pts = pointsConfig.exactScore;
+      else if(resOutcome === guessOutcome) pts = pointsConfig.correctOutcome;
+      else pts = pointsConfig.wrong;
+      totalPoints += pts;
+    }
+
+    const row = document.createElement("div");
+    row.className = "kamp";
+    row.innerHTML = `
+      <div class="hold">
+        <img src="${k.hjemmeFlag}" alt="${k.hjemmehold}"> ${k.hjemmehold}
+        <input type="number" min="0" class="score-input" data-match="${k.id}" data-type="home" ${locked?"disabled":""} value="${g.homeGoals}">
+        -
+        <input type="number" min="0" class="score-input" data-match="${k.id}" data-type="away" ${locked?"disabled":""} value="${g.awayGoals}">
+        ${k.udehold} <img src="${k.udeFlag}" alt="${k.udehold}">
+      </div>
+      <div>${start.toLocaleString()}</div>
+      <div class="points">${locked ? "🔒" : ""} ${pts!==""?pts+"p":""}</div>
+      <div>
+        ${isAdmin
+          ? `<div class="admin-result">
+              <label>Resultat:</label>
+              <input type="number" min="0" class="score-input admin" data-match="${k.id}" data-type="rhome" value="${r.homeGoals}">
+              -
+              <input type="number" min="0" class="score-input admin" data-match="${k.id}" data-type="raway" value="${r.awayGoals}">
+            </div>`
+          : (locked?`<div class="locked">🔒 Lukket for gæt</div>`:"")}
+      </div>
+    `;
+    container.appendChild(row);
+  });
+
+  document.getElementById("sum-points").textContent = `Samlede point: ${totalPoints}`;
+}
+
+function outcome(h,a){
+  h = parseInt(h,10); a = parseInt(a,10);
+  if(isNaN(h)||isNaN(a)) return "";
+  if(h>a) return "home";
+  if(h<a) return "away";
+  return "draw";
+}
+
+/* =======================
+   GEM & LOAD (placeholders)
+   ======================= */
+function gemGaet(){
+  // Læs værdier fra inputs
+  document.querySelectorAll(".score-input[data-match]").forEach(inp=>{
+    const id = inp.dataset.match;
+    const t = inp.dataset.type;
+    if(!guesses[id]) guesses[id] = {};
+    if(t==="home") guesses[id].homeGoals = inp.value;
+    if(t==="away") guesses[id].awayGoals = inp.value;
+  });
+
+  // 🔹 TODO: Gem guesses i Firestore:
+  //   users/{uid}/guesses/{matchId}
+  //   fields: homeGoals, awayGoals, savedAt
+  console.log("Gemmer gæt til DB:", guesses);
+  alert("Gæt gemt (indsæt Firebase gemmekode her)");
+}
+
+function gemResultater(){
+  document.querySelectorAll(".score-input.admin").forEach(inp=>{
+    const id = inp.dataset.match;
+    const t = inp.dataset.type;
+    if(!results[id]) results[id] = {};
+    if(t==="rhome") results[id].homeGoals = inp.value;
+    if(t==="raway") results[id].awayGoals = inp.value;
+  });
+  // 🔹 TODO: Gem resultater i Firestore:
+  //   matches/{matchId} -> homeGoals, awayGoals
+  console.log("Gemmer resultater til DB:", results);
+  alert("Resultater gemt (indsæt Firebase gemmekode her)");
+}
+
+/* =======================
+   EVENTS
+   ======================= */
+document.getElementById("gemBtn").addEventListener("click",()=>{
+  if(isAdmin) gemResultater();
+  gemGaet();
+  renderKampe();
+});
+
+/* =======================
+   INITIAL LOAD
+   ======================= */
+// 🔹 TODO: Hent tidligere gæt og resultater fra Firestore her og sæt guesses/results
+//   Når hentet -> renderKampe();
+renderKampe();
+</script>
+</body>
+</html>
+
