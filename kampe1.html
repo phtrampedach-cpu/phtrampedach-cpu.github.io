@@ -1,149 +1,68 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gæt på kampene</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f7f7f7; padding:20px; }
-    main { max-width:900px; margin:0 auto; background:white; padding:20px; border-radius:8px; box-shadow:0 4px 14px rgba(0,0,0,0.06); }
-    h1{ font-size:22px; margin-bottom:12px }
-    .kamp { display:grid; grid-template-columns: 1fr auto auto auto; align-items:center;
-            gap:12px; padding:12px; border-radius:8px; background:#fff; border:1px solid #eee; margin-bottom:10px; }
-    .hold { display:flex; align-items:center; gap:8px; }
-    .hold img { width:28px; height:20px; object-fit:cover; border-radius:3px; }
-    .score-input { width:45px; padding:5px; text-align:center; border:1px solid #ccc; border-radius:5px; }
-    .locked { color:#a00; font-size:12px; display:flex; align-items:center; gap:4px; }
-    .points { font-weight:bold; text-align:center; }
-    .admin-result { background:#fafafa; padding:4px 6px; border-radius:5px; border:1px solid #ddd; }
-    #gemBtn { margin-top:12px; padding:10px 14px; width:100%; border-radius:8px; border:none;
-              background:#0b71d6; color:#fff; font-weight:600; cursor:pointer; }
-    #gemBtn:disabled { opacity:0.6; cursor:not-allowed; }
-    #sum-points { margin-top:10px; font-weight:bold; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-100">
 
-<header>
-<nav class="menu-bar">
-  <a href="index.html">Forside</a>
-  <a href="gaet.html">Dashboard</a>
-  <a href="contact.html" >Kontakt</a>
-</nav>
-</header
+<header class="bg-white shadow p-4 mb-6">
+  <nav class="max-w-3xl mx-auto flex gap-4">
+    <a href="index.html" class="text-blue-600 font-semibold">Forside</a>
+    <a href="gaet.html" class="text-blue-600 font-semibold">Dashboard</a>
+    <a href="contact.html" class="text-blue-600 font-semibold">Kontakt</a>
+  </nav>
+</header>
 
-<main>
-  <h1>Gæt på resultat</h1>
-  <p>Du kan redigere dine gæt indtil 1 time før kampstart.</p>
-
-  <div id="kampe-container"></div>
-  <button id="gemBtn">Gem gæt</button>
-  <p id="sum-points"></p>
+<main class="max-w-3xl mx-auto p-4">
+  <h1 class="text-3xl font-bold mb-6">Gæt på resultat</h1>
+  <div id="content-area"></div>
+  <p id="sum-points" class="font-bold mt-4"></p>
 </main>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <script>
 /* =======================
    KONFIGURATION
-   ======================= */
-const pointsConfig = {
-  exactScore: 3,       // korrekt målscore
-  correctOutcome: 1,   // korrekt udfald men forkert målscore
-  wrong: 0
-};
-const ADMIN_EMAIL = "P.H.Trampedach@gmail.com"; // bruges kun til at vise adminfelter
+======================= */
+const pointsConfig = { exactScore:3, correctOutcome:1, wrong:0 };
+const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
 
 /* =======================
-   FIREBASE INITIALISERING
-   ======================= */
+   FIREBASE INIT
+======================= */
+const firebaseConfig = { /* din Firebase config her */ };
 const app = firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();// til login
-const db = firebase.firestore(); // til gæt og point
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 /* =======================
-   KAMPE (kan udvides frit)
-   ======================= */
+   KAMPE
+======================= */
 const kampe = [
-  { id:"match1", hjemmehold:"Danmark", hjemmeFlag:"home-flag.png", udehold:"Tyskland", udeFlag:"away-flag.png", start:"2025-11-20T18:00:00" },
-  { id:"match2", hjemmehold:"Frankrig", hjemmeFlag:"france.png", udehold:"Italien", udeFlag:"italy.png", start:"2025-11-21T20:00:00" },
-  { id:"match3", hjemmehold:"Spanien", hjemmeFlag:"spain.png", udehold:"Portugal", udeFlag:"portugal.png", start:"2025-11-22T18:00:00" }
+  { id:"match1", hjemmehold: "Danmark", hjemmeFlag: "danmark.png", udehold: "Tyskland", udeFlag: "tyskland.png", dato: "20/11", tid: "18:00", start:"2025-11-20T18:00:00" },
+  { id:"match2", hjemmehold: "Frankrig", hjemmeFlag: "france.png", udehold: "Italien", udeFlag: "italy.png", dato: "21/11", tid: "20:00", start:"2025-11-21T20:00:00" },
+  { id:"match3", hjemmehold: "Spanien", hjemmeFlag: "spain.png", udehold: "Portugal", udeFlag: "portugal.png", dato: "22/11", tid: "18:00", start:"2025-11-22T18:00:00" }
 ];
 
-// 🔹 TODO: hent brugerens email fra login-system
-// Hent den aktuelle bruger
-const user = auth.currentUser;
-if(user){
-  const currentUserEmail = user.email; // brugerens email
-  const uid = user.uid;                // brugerens UID
-  const isAdmin = (currentUserEmail === "P.H.Trampedach@gmail.com");
-} else {
-  // Hvis ikke logget ind → send tilbage til login
-  window.location.href = "login.html";
-}
-const isAdmin = (currentUserEmail === ADMIN_EMAIL);
+let guesses = {};
+let results = {};
+let currentUserEmail = "";
+let currentUserUid = "";
+let isAdmin = false;
+
+const contentArea = document.getElementById('content-area');
 
 /* =======================
-   RENDER
-   ======================= */
-const container = document.getElementById("kampe-container");
-let guesses = {};   // gemmer brugerens gæt
-let results = {};   // gemmer faktiske resultater (admin)
-
-function renderKampe(){
-  container.innerHTML = "";
-  let totalPoints = 0;
-  const now = new Date();
-
-  kampe.forEach(k => {
-    const start = new Date(k.start);
-    const cutoff = new Date(start.getTime() - 60*60*1000);
-    const locked = now > cutoff;
-
-    // eksisterende data
-    const g = guesses[k.id] || {homeGoals:"", awayGoals:""};
-    const r = results[k.id] || {homeGoals:"", awayGoals:""};
-
-    // beregn point hvis der findes resultat
-    let pts = "";
-    if(r.homeGoals !== "" && r.awayGoals !== "" && g.homeGoals !== "" && g.awayGoals !== ""){
-      const resOutcome = outcome(r.homeGoals, r.awayGoals);
-      const guessOutcome = outcome(g.homeGoals, g.awayGoals);
-      if(r.homeGoals == g.homeGoals && r.awayGoals == g.awayGoals) pts = pointsConfig.exactScore;
-      else if(resOutcome === guessOutcome) pts = pointsConfig.correctOutcome;
-      else pts = pointsConfig.wrong;
-      totalPoints += pts;
-    }
-
-    const row = document.createElement("div");
-    row.className = "kamp";
-    row.innerHTML = `
-      <div class="hold">
-        <img src="${k.hjemmeFlag}" alt="${k.hjemmehold}"> ${k.hjemmehold}
-        <input type="number" min="0" class="score-input" data-match="${k.id}" data-type="home" ${locked?"disabled":""} value="${g.homeGoals}">
-        -
-        <input type="number" min="0" class="score-input" data-match="${k.id}" data-type="away" ${locked?"disabled":""} value="${g.awayGoals}">
-        ${k.udehold} <img src="${k.udeFlag}" alt="${k.udehold}">
-      </div>
-      <div>${start.toLocaleString()}</div>
-      <div class="points">${locked ? "🔒" : ""} ${pts!==""?pts+"p":""}</div>
-      <div>
-        ${isAdmin
-          ? `<div class="admin-result">
-              <label>Resultat:</label>
-              <input type="number" min="0" class="score-input admin" data-match="${k.id}" data-type="rhome" value="${r.homeGoals}">
-              -
-              <input type="number" min="0" class="score-input admin" data-match="${k.id}" data-type="raway" value="${r.awayGoals}">
-            </div>`
-          : (locked?`<div class="locked">🔒 Lukket for gæt</div>`:"")}
-      </div>
-    `;
-    container.appendChild(row);
-  });
-
-  document.getElementById("sum-points").textContent = `Samlede point: ${totalPoints}`;
-}
-
+   HJÆLPEFUNKTIONER
+======================= */
 function outcome(h,a){
-  h = parseInt(h,10); a = parseInt(a,10);
+  h=parseInt(h,10); a=parseInt(a,10);
   if(isNaN(h)||isNaN(a)) return "";
   if(h>a) return "home";
   if(h<a) return "away";
@@ -151,112 +70,137 @@ function outcome(h,a){
 }
 
 /* =======================
-   GEM & LOAD (placeholders)
-   ======================= */
-function gemGaet(){
-  // Læs værdier fra inputs
-  document.querySelectorAll(".score-input[data-match]").forEach(inp=>{
-    const id = inp.dataset.match;
-    const t = inp.dataset.type;
-    if(!guesses[id]) guesses[id] = {};
-    if(t==="home") guesses[id].homeGoals = inp.value;
-    if(t==="away") guesses[id].awayGoals = inp.value;
+   RENDER KAMPKORT
+======================= */
+function renderKampe(){
+  contentArea.innerHTML = "";
+  const now = new Date();
+  let totalPoints = 0;
+
+  kampe.forEach((kamp,index)=>{
+    const start = new Date(kamp.start);
+    const cutoff = new Date(start.getTime() - 60*60*1000);
+    const locked = now>cutoff;
+
+    const g = guesses[kamp.id] || {homeGoals:"", awayGoals:""};
+    const r = results[kamp.id] || {homeGoals:"", awayGoals:""};
+
+    let pts="";
+    if(r.homeGoals!=="" && r.awayGoals!=="" && g.homeGoals!=="" && g.awayGoals!==""){
+      const resOutcome=outcome(r.homeGoals,r.awayGoals);
+      const guessOutcome=outcome(g.homeGoals,g.awayGoals);
+      if(r.homeGoals==g.homeGoals && r.awayGoals==g.awayGoals) pts=pointsConfig.exactScore;
+      else if(resOutcome==guessOutcome) pts=pointsConfig.correctOutcome;
+      else pts=pointsConfig.wrong;
+      totalPoints+=pts;
+    }
+
+    const kampDiv = document.createElement('div');
+    kampDiv.className = "bg-white shadow-md rounded-lg p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4";
+
+    kampDiv.innerHTML = `
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2"><img src="${kamp.hjemmeFlag}" alt="" class="w-8 h-8"><span class="font-semibold">${kamp.hjemmehold}</span></div>
+        <span class="font-bold text-xl">vs</span>
+        <div class="flex items-center gap-2"><img src="${kamp.udeFlag}" alt="" class="w-8 h-8"><span class="font-semibold">${kamp.udehold}</span></div>
+      </div>
+
+      <div class="flex gap-2">
+        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1" data-match="${kamp.id}" data-type="home" value="${g.homeGoals}" ${locked?"disabled":""}>
+        -
+        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1" data-match="${kamp.id}" data-type="away" value="${g.awayGoals}" ${locked?"disabled":""}>
+      </div>
+
+      <div class="text-gray-500 text-sm">${kamp.dato} ${kamp.tid} ${locked?"🔒 Lukket":""}</div>
+
+      <div class="font-bold">${pts!==""?pts+"p":""}</div>
+
+      ${isAdmin?`<div class="flex gap-2 mt-2 md:mt-0">
+        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1 admin" data-match="${kamp.id}" data-type="rhome" value="${r.homeGoals}">
+        -
+        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1 admin" data-match="${kamp.id}" data-type="raway" value="${r.awayGoals}">
+      </div>`:""}
+    `;
+
+    contentArea.appendChild(kampDiv);
   });
 
-  // Gem guesses i Firestore:
+  document.getElementById("sum-points").textContent = `Samlede point: ${totalPoints}`;
+}
+
+/* =======================
+   GEM DATA
+======================= */
 async function gemGaet(){
   document.querySelectorAll(".score-input[data-match]").forEach(inp=>{
-    const id = inp.dataset.match;
-    const t = inp.dataset.type;
-    if(!guesses[id]) guesses[id] = {};
-    if(t==="home") guesses[id].homeGoals = inp.value;
-    if(t==="away") guesses[id].awayGoals = inp.value;
+    const id=inp.dataset.match, t=inp.dataset.type;
+    if(!guesses[id]) guesses[id]={};
+    if(t==="home") guesses[id].homeGoals=inp.value;
+    if(t==="away") guesses[id].awayGoals=inp.value;
   });
 
-  const uid = auth.currentUser.uid;
   const batch = db.batch();
-
-  Object.keys(guesses).forEach(matchId => {
-    const ref = db.collection("users").doc(uid).collection("guesses").doc(matchId);
-    batch.set(ref, {
-      homeGoals: guesses[matchId].homeGoals,
-      awayGoals: guesses[matchId].awayGoals,
-      savedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
+  Object.keys(guesses).forEach(matchId=>{
+    const ref = db.collection("users").doc(currentUserUid).collection("guesses").doc(matchId);
+    batch.set(ref,{homeGoals:guesses[matchId].homeGoals, awayGoals:guesses[matchId].awayGoals, savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
   });
-
   await batch.commit();
-  renderKampe();
-};
 }
 
-function gemResultater(){
+async function gemResultater(){
   document.querySelectorAll(".score-input.admin").forEach(inp=>{
-    const id = inp.dataset.match;
-    const t = inp.dataset.type;
-    if(!results[id]) results[id] = {};
-    if(t==="rhome") results[id].homeGoals = inp.value;
-    if(t==="raway") results[id].awayGoals = inp.value;
-  });
-  // Gem resultater i Firestore:
-  //   matches/{matchId} -> homeGoals, awayGoals
-  async function gemResultater(){
-  document.querySelectorAll(".score-input.admin").forEach(inp=>{
-    const id = inp.dataset.match;
-    const t = inp.dataset.type;
-    if(!results[id]) results[id] = {};
-    if(t==="rhome") results[id].homeGoals = inp.value;
-    if(t==="raway") results[id].awayGoals = inp.value;
+    const id=inp.dataset.match, t=inp.dataset.type;
+    if(!results[id]) results[id]={};
+    if(t==="rhome") results[id].homeGoals=inp.value;
+    if(t==="raway") results[id].awayGoals=inp.value;
   });
 
-  // Gem i Firestore under matches/{matchId}
   const batch = db.batch();
-  Object.keys(results).forEach(matchId => {
+  Object.keys(results).forEach(matchId=>{
     const ref = db.collection("matches").doc(matchId);
-    batch.set(ref, {
-      homeGoals: results[matchId].homeGoals,
-      awayGoals: results[matchId].awayGoals
-    }, { merge: true });
+    batch.set(ref,{homeGoals:results[matchId].homeGoals, awayGoals:results[matchId].awayGoals},{merge:true});
   });
-
   await batch.commit();
-  renderKampe();
-};
 }
 
 /* =======================
-   EVENTS
-   ======================= */
-document.getElementById("gemBtn").addEventListener("click",()=>{
-  if(isAdmin) gemResultater();
-  gemGaet();
-  renderKampe();
+   INIT
+======================= */
+auth.onAuthStateChanged(async user=>{
+  if(user){
+    currentUserEmail=user.email;
+    currentUserUid=user.uid;
+    isAdmin = (currentUserEmail===ADMIN_EMAIL);
+
+    // Hent tidligere gæt
+    const guessSnap = await db.collection("users").doc(currentUserUid).collection("guesses").get();
+    guessSnap.forEach(doc=>{guesses[doc.id]=doc.data();});
+
+    // Hent resultater
+    const resultSnap = await db.collection("matches").get();
+    resultSnap.forEach(doc=>{results[doc.id]=doc.data();});
+
+    renderKampe();
+
+    const gemBtn = document.querySelector('#content-area + button') || (()=>{
+      const b=document.createElement('button');
+      b.className="mt-4 w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700";
+      b.textContent="Gem gæt";
+      document.querySelector('main').appendChild(b);
+      return b;
+    })();
+
+    gemBtn.addEventListener('click', async ()=>{
+      if(isAdmin) await gemResultater();
+      else await gemGaet();
+      renderKampe();
+      alert("Gæt/resultater gemt!");
+    });
+  } else {
+    window.location.href="login.html";
+  }
 });
-
-/* =======================
-   INITIAL LOAD
-   ======================= */
-// 🔹 TODO: Hent tidligere gæt og resultater fra Firestore her og sæt guesses/results
-//   Når hentet -> renderKampe();
-async function hentData(){
-  const uid = auth.currentUser.uid;
-
-  // Hent brugerens gæt
-  const guessSnap = await db.collection("users").doc(uid).collection("guesses").get();
-  guessSnap.forEach(doc => {
-    guesses[doc.id] = doc.data();
-  });
-
-  // Hent resultater
-  const resultSnap = await db.collection("matches").get();
-  resultSnap.forEach(doc => {
-    results[doc.id] = doc.data();
-  });
-
-  renderKampe();
-}
-hentData();
 </script>
+
 </body>
 </html>
-
