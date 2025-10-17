@@ -52,10 +52,9 @@ const pointsConfig = {
 };
 const ADMIN_EMAIL = "P.H.Trampedach@gmail.com"; // bruges kun til at vise adminfelter
 
-// 🔹 TODO: tilføj dine Firebase-init og auth her
-// fx const app = firebase.initializeApp(firebaseConfig);
-// const auth = firebase.auth();
-// const db = firebase.firestore();
+/* =======================
+   FIREBASE INITIALISERING
+   ======================= */
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();// til login
 const db = firebase.firestore(); // til gæt og point
@@ -70,7 +69,16 @@ const kampe = [
 ];
 
 // 🔹 TODO: hent brugerens email fra login-system
-const currentUserEmail = "test@demo.dk"; // <--- erstattes med auth.currentUser.email
+// Hent den aktuelle bruger
+const user = auth.currentUser;
+if(user){
+  const currentUserEmail = user.email; // brugerens email
+  const uid = user.uid;                // brugerens UID
+  const isAdmin = (currentUserEmail === "P.H.Trampedach@gmail.com");
+} else {
+  // Hvis ikke logget ind → send tilbage til login
+  window.location.href = "login.html";
+}
 const isAdmin = (currentUserEmail === ADMIN_EMAIL);
 
 /* =======================
@@ -155,11 +163,31 @@ function gemGaet(){
     if(t==="away") guesses[id].awayGoals = inp.value;
   });
 
-  // 🔹 TODO: Gem guesses i Firestore:
-  //   users/{uid}/guesses/{matchId}
-  //   fields: homeGoals, awayGoals, savedAt
-  console.log("Gemmer gæt til DB:", guesses);
-  alert("Gæt gemt (indsæt Firebase gemmekode her)");
+  // Gem guesses i Firestore:
+async function gemGaet(){
+  document.querySelectorAll(".score-input[data-match]").forEach(inp=>{
+    const id = inp.dataset.match;
+    const t = inp.dataset.type;
+    if(!guesses[id]) guesses[id] = {};
+    if(t==="home") guesses[id].homeGoals = inp.value;
+    if(t==="away") guesses[id].awayGoals = inp.value;
+  });
+
+  const uid = auth.currentUser.uid;
+  const batch = db.batch();
+
+  Object.keys(guesses).forEach(matchId => {
+    const ref = db.collection("users").doc(uid).collection("guesses").doc(matchId);
+    batch.set(ref, {
+      homeGoals: guesses[matchId].homeGoals,
+      awayGoals: guesses[matchId].awayGoals,
+      savedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  });
+
+  await batch.commit();
+  renderKampe();
+};
 }
 
 function gemResultater(){
@@ -170,10 +198,30 @@ function gemResultater(){
     if(t==="rhome") results[id].homeGoals = inp.value;
     if(t==="raway") results[id].awayGoals = inp.value;
   });
-  // 🔹 TODO: Gem resultater i Firestore:
+  // Gem resultater i Firestore:
   //   matches/{matchId} -> homeGoals, awayGoals
-  console.log("Gemmer resultater til DB:", results);
-  alert("Resultater gemt (indsæt Firebase gemmekode her)");
+  async function gemResultater(){
+  document.querySelectorAll(".score-input.admin").forEach(inp=>{
+    const id = inp.dataset.match;
+    const t = inp.dataset.type;
+    if(!results[id]) results[id] = {};
+    if(t==="rhome") results[id].homeGoals = inp.value;
+    if(t==="raway") results[id].awayGoals = inp.value;
+  });
+
+  // Gem i Firestore under matches/{matchId}
+  const batch = db.batch();
+  Object.keys(results).forEach(matchId => {
+    const ref = db.collection("matches").doc(matchId);
+    batch.set(ref, {
+      homeGoals: results[matchId].homeGoals,
+      awayGoals: results[matchId].awayGoals
+    }, { merge: true });
+  });
+
+  await batch.commit();
+  renderKampe();
+};
 }
 
 /* =======================
@@ -190,7 +238,24 @@ document.getElementById("gemBtn").addEventListener("click",()=>{
    ======================= */
 // 🔹 TODO: Hent tidligere gæt og resultater fra Firestore her og sæt guesses/results
 //   Når hentet -> renderKampe();
-renderKampe();
+async function hentData(){
+  const uid = auth.currentUser.uid;
+
+  // Hent brugerens gæt
+  const guessSnap = await db.collection("users").doc(uid).collection("guesses").get();
+  guessSnap.forEach(doc => {
+    guesses[doc.id] = doc.data();
+  });
+
+  // Hent resultater
+  const resultSnap = await db.collection("matches").get();
+  resultSnap.forEach(doc => {
+    results[doc.id] = doc.data();
+  });
+
+  renderKampe();
+}
+hentData();
 </script>
 </body>
 </html>
