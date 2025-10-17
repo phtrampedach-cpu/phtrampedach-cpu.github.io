@@ -4,46 +4,58 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gæt på kampene</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-gray-100">
+<body>
 
-<header class="bg-white shadow p-4 mb-6">
-  <nav class="max-w-3xl mx-auto flex gap-4">
-    <a href="index.html" class="text-blue-600 font-semibold">Forside</a>
-    <a href="gaet.html" class="text-blue-600 font-semibold">Dashboard</a>
-    <a href="contact.html" class="text-blue-600 font-semibold">Kontakt</a>
+<header>
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="contact.html">Kontakt</a>
   </nav>
 </header>
 
-<main class="max-w-3xl mx-auto p-4">
-  <h1 class="text-3xl font-bold mb-6">Gæt på resultat</h1>
+<main>
+  <h1>Gæt på resultat</h1>
+  <p id="user-info"></p>
+
   <div id="content-area"></div>
   <p id="sum-points" class="font-bold mt-4"></p>
+
+  <h2>Highscore</h2>
+  <div id="highscore-container"></div>
 </main>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <script>
-/* =======================
+/* =========================
    KONFIGURATION
-======================= */
+========================= */
 const pointsConfig = { exactScore:3, correctOutcome:1, wrong:0 };
 const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
 
-/* =======================
+/* =========================
    FIREBASE INIT
-======================= */
-const firebaseConfig = { /* din Firebase config her */ };
+========================= */
+const firebaseConfig = { 
+  apiKey: "xxx",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+  measurementId: "G-B6YTNFRJPS"
+};
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* =======================
+/* =========================
    KAMPE
-======================= */
+========================= */
 const kampe = [
   { id:"match1", hjemmehold: "Danmark", hjemmeFlag: "danmark.png", udehold: "Tyskland", udeFlag: "tyskland.png", dato: "20/11", tid: "18:00", start:"2025-11-20T18:00:00" },
   { id:"match2", hjemmehold: "Frankrig", hjemmeFlag: "france.png", udehold: "Italien", udeFlag: "italy.png", dato: "21/11", tid: "20:00", start:"2025-11-21T20:00:00" },
@@ -56,11 +68,9 @@ let currentUserEmail = "";
 let currentUserUid = "";
 let isAdmin = false;
 
-const contentArea = document.getElementById('content-area');
-
-/* =======================
-   HJÆLPEFUNKTIONER
-======================= */
+/* =========================
+   HJÆLPEFUNKTION
+========================= */
 function outcome(h,a){
   h=parseInt(h,10); a=parseInt(a,10);
   if(isNaN(h)||isNaN(a)) return "";
@@ -69,15 +79,16 @@ function outcome(h,a){
   return "draw";
 }
 
-/* =======================
+/* =========================
    RENDER KAMPKORT
-======================= */
+========================= */
 function renderKampe(){
+  const contentArea = document.getElementById("content-area");
   contentArea.innerHTML = "";
   const now = new Date();
   let totalPoints = 0;
 
-  kampe.forEach((kamp,index)=>{
+  kampe.forEach((kamp)=>{
     const start = new Date(kamp.start);
     const cutoff = new Date(start.getTime() - 60*60*1000);
     const locked = now>cutoff;
@@ -96,41 +107,38 @@ function renderKampe(){
     }
 
     const kampDiv = document.createElement('div');
-    kampDiv.className = "bg-white shadow-md rounded-lg p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4";
-
+    kampDiv.className = "kamp bg-white shadow-md rounded-lg p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4";
     kampDiv.innerHTML = `
       <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2"><img src="${kamp.hjemmeFlag}" alt="" class="w-8 h-8"><span class="font-semibold">${kamp.hjemmehold}</span></div>
+        <div class="flex items-center gap-2"><img src="${kamp.hjemmeFlag}" class="w-8 h-8"><span>${kamp.hjemmehold}</span></div>
         <span class="font-bold text-xl">vs</span>
-        <div class="flex items-center gap-2"><img src="${kamp.udeFlag}" alt="" class="w-8 h-8"><span class="font-semibold">${kamp.udehold}</span></div>
+        <div class="flex items-center gap-2"><img src="${kamp.udeFlag}" class="w-8 h-8"><span>${kamp.udehold}</span></div>
       </div>
 
       <div class="flex gap-2">
-        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1" data-match="${kamp.id}" data-type="home" value="${g.homeGoals}" ${locked?"disabled":""}>
+        <input type="number" min="0" class="score-input" data-match="${kamp.id}" data-type="home" value="${g.homeGoals}" ${locked?"disabled":""}>
         -
-        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1" data-match="${kamp.id}" data-type="away" value="${g.awayGoals}" ${locked?"disabled":""}>
+        <input type="number" min="0" class="score-input" data-match="${kamp.id}" data-type="away" value="${g.awayGoals}" ${locked?"disabled":""}>
       </div>
 
-      <div class="text-gray-500 text-sm">${kamp.dato} ${kamp.tid} ${locked?"🔒 Lukket":""}</div>
-
+      <div class="text-gray-500 text-sm">${kamp.dato} ${kamp.tid} ${locked?"🔒":""}</div>
       <div class="font-bold">${pts!==""?pts+"p":""}</div>
 
       ${isAdmin?`<div class="flex gap-2 mt-2 md:mt-0">
-        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1 admin" data-match="${kamp.id}" data-type="rhome" value="${r.homeGoals}">
+        <input type="number" min="0" class="score-input admin" data-match="${kamp.id}" data-type="rhome" value="${r.homeGoals}">
         -
-        <input type="number" min="0" class="score-input w-12 text-center border rounded px-1 admin" data-match="${kamp.id}" data-type="raway" value="${r.awayGoals}">
+        <input type="number" min="0" class="score-input admin" data-match="${kamp.id}" data-type="raway" value="${r.awayGoals}">
       </div>`:""}
     `;
-
     contentArea.appendChild(kampDiv);
   });
 
   document.getElementById("sum-points").textContent = `Samlede point: ${totalPoints}`;
 }
 
-/* =======================
-   GEM DATA
-======================= */
+/* =========================
+   GEM GÆT & RESULTATER
+========================= */
 async function gemGaet(){
   document.querySelectorAll(".score-input[data-match]").forEach(inp=>{
     const id=inp.dataset.match, t=inp.dataset.type;
@@ -138,10 +146,9 @@ async function gemGaet(){
     if(t==="home") guesses[id].homeGoals=inp.value;
     if(t==="away") guesses[id].awayGoals=inp.value;
   });
-
   const batch = db.batch();
   Object.keys(guesses).forEach(matchId=>{
-    const ref = db.collection("users").doc(currentUserUid).collection("guesses").doc(matchId);
+    const ref=db.collection("users").doc(currentUserUid).collection("guesses").doc(matchId);
     batch.set(ref,{homeGoals:guesses[matchId].homeGoals, awayGoals:guesses[matchId].awayGoals, savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
   });
   await batch.commit();
@@ -154,53 +161,93 @@ async function gemResultater(){
     if(t==="rhome") results[id].homeGoals=inp.value;
     if(t==="raway") results[id].awayGoals=inp.value;
   });
-
   const batch = db.batch();
   Object.keys(results).forEach(matchId=>{
-    const ref = db.collection("matches").doc(matchId);
+    const ref=db.collection("matches").doc(matchId);
     batch.set(ref,{homeGoals:results[matchId].homeGoals, awayGoals:results[matchId].awayGoals},{merge:true});
   });
   await batch.commit();
 }
 
-/* =======================
+/* =========================
+   HIGHSCORE
+========================= */
+async function renderHighscore(){
+  const highscoreContainer=document.getElementById("highscore-container");
+  highscoreContainer.innerHTML="<p>Indlæser highscore...</p>";
+
+  const usersSnap=await db.collection("users").get();
+  const matchesSnap=await db.collection("matches").get();
+  const matchResults={};
+  matchesSnap.forEach(doc=>{ matchResults[doc.id]=doc.data(); });
+
+  const scores=[];
+  for(const userDoc of usersSnap.docs){
+    const uid=userDoc.id;
+    const guessesSnap = await userDoc.ref.collection("guesses").get();
+    let points=0;
+    guessesSnap.forEach(doc=>{
+      const guess=doc.data();
+      const res=matchResults[doc.id];
+      if(res){
+        const resOutcome=outcome(res.homeGoals,res.awayGoals);
+        const guessOutcome=outcome(guess.homeGoals,guess.awayGoals);
+        if(guess.homeGoals==res.homeGoals && guess.awayGoals==res.awayGoals) points+=pointsConfig.exactScore;
+        else if(resOutcome==guessOutcome) points+=pointsConfig.correctOutcome;
+      }
+    });
+    scores.push({name:userDoc.data().name||userDoc.data().email, points});
+  }
+
+  scores.sort((a,b)=>b.points - a.points);
+  highscoreContainer.innerHTML=`
+    <table class="w-full border-collapse">
+      <thead><tr class="border-b"><th>#</th><th>Bruger</th><th>Point</th></tr></thead>
+      <tbody>${scores.map((u,i)=>`<tr class="border-b"><td>${i+1}</td><td>${u.name}</td><td>${u.points}</td></tr>`).join('')}</tbody>
+    </table>
+  `;
+}
+
+/* =========================
    INIT
-======================= */
+========================= */
 auth.onAuthStateChanged(async user=>{
   if(user){
     currentUserEmail=user.email;
     currentUserUid=user.uid;
-    isAdmin = (currentUserEmail===ADMIN_EMAIL);
+    isAdmin=(currentUserEmail===ADMIN_EMAIL);
 
-    // Hent tidligere gæt
-    const guessSnap = await db.collection("users").doc(currentUserUid).collection("guesses").get();
+    // hent tidligere gæt og resultater
+    const guessSnap=await db.collection("users").doc(currentUserUid).collection("guesses").get();
     guessSnap.forEach(doc=>{guesses[doc.id]=doc.data();});
-
-    // Hent resultater
-    const resultSnap = await db.collection("matches").get();
+    const resultSnap=await db.collection("matches").get();
     resultSnap.forEach(doc=>{results[doc.id]=doc.data();});
 
     renderKampe();
+    renderHighscore();
 
-    const gemBtn = document.querySelector('#content-area + button') || (()=>{
-      const b=document.createElement('button');
-      b.className="mt-4 w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700";
-      b.textContent="Gem gæt";
-      document.querySelector('main').appendChild(b);
-      return b;
-    })();
-
-    gemBtn.addEventListener('click', async ()=>{
+    // gem-knap
+    const gemBtn=document.createElement("button");
+    gemBtn.textContent="Gem gæt/resultater";
+    gemBtn.className="mt-4 w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700";
+    document.querySelector("main").appendChild(gemBtn);
+    gemBtn.addEventListener("click", async ()=>{
       if(isAdmin) await gemResultater();
       else await gemGaet();
       renderKampe();
+      renderHighscore();
       alert("Gæt/resultater gemt!");
     });
+
   } else {
-    window.location.href="login.html";
+    window.location.href="gaet.html";
   }
 });
 </script>
+
+<style>
+.kamp input.score-input{width:40px;text-align:center;}
+</style>
 
 </body>
 </html>
