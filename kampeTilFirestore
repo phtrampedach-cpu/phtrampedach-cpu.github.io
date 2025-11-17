@@ -39,3 +39,16 @@ async function importMatches() {
   alert("Alle kampe er importeret til Firestore!");
 }
 </script>
+
+How to use:
+Gå til dashboard.html
+
+Indsæt knappen + scriptet midt i <main> eller til sidst før </body>
+
+Åbn dashboard i browseren
+
+Tryk: Importer alle kampe til Firestore
+
+Når du ser "Alle kampe er importeret", er det færdigt
+
+SLET KNAPPEN igen — den skal ikke bruges fremove

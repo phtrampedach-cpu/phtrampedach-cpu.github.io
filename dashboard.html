@@ -27,12 +27,11 @@
   <p id="user-info"></p>
 
   <!-- FANEKNAPPER -->
-<div class="tabs">
-  <button class="tab-btn" onclick="window.location.href='kampe.html'">Gæt på resultat</button>
-  <button class="tab-btn" id="btn-tilskuertal">Gæt på tilskuertal</button>
-  <button class="tab-btn logout" id="btn-logout">Log ud</button>
-</div>
-
+  <div class="tabs">
+    <button class="tab-btn" onclick="window.location.href='kampe.html'">Gæt på resultat</button>
+    <button class="tab-btn" id="btn-tilskuertal">Gæt på tilskuertal</button>
+    <button class="tab-btn logout" id="btn-logout">Log ud</button>
+  </div>
 
   <!-- Indholdsområde -->
   <section id="content-area">
@@ -57,7 +56,7 @@
   // Initialiser app
   const app = firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
-  const analytics = firebase.analytics(app); // korrekt compat
+  const analytics = firebase.analytics(app);
   const db = firebase.firestore();
 
   // ===== Tjek om bruger er logget ind =====
@@ -66,65 +65,12 @@
     if (user) {
       userInfo.textContent = "Du er logget ind som: " + user.email;
     } else {
-      // Hvis ingen bruger → tilbage til login
       window.location.href = "gaet.html";
     }
   });
 
   // ===== Faner / knapper =====
   const contentArea = document.getElementById('content-area');
-  document.getElementById('btn-resultat').addEventListener('click', () => {
-  contentArea.innerHTML = `
-    <h2 class="text-2xl font-bold mb-4">Gæt på resultat</h2>
-
-    <!-- Kampkort -->
-    <div class="bg-white shadow-md rounded-lg p-4 mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
-          <img src="home-flag.png" alt="Hjemmehold flag" class="w-8 h-8">
-          <span class="font-semibold">Danmark</span>
-        </div>
-        <span class="font-bold text-xl">vs</span>
-        <div class="flex items-center gap-2">
-          <img src="away-flag.png" alt="Udehold flag" class="w-8 h-8">
-          <span class="font-semibold">Tyskland</span>
-        </div>
-      </div>
-
-      <div class="flex gap-2">
-        <button class="choice-btn px-4 py-1 rounded border" data-choice="home">Hjemme</button>
-        <button class="choice-btn px-4 py-1 rounded border" data-choice="draw">Uafgjort</button>
-        <button class="choice-btn px-4 py-1 rounded border" data-choice="away">Ude</button>
-      </div>
-
-      <div class="text-gray-500 text-sm">
-        20/11 18:00
-      </div>
-    </div>
-
-    <!-- Gem-knap -->
-    <button class="mt-4 w-full bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700">
-      Gem gæt
-    </button>
-  `;
-
-  // Interaktivitet for udfaldsknapper
-  const allButtons = contentArea.querySelectorAll('.choice-btn');
-  allButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const parent = button.parentElement;
-      parent.querySelectorAll('.choice-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white');
-        btn.classList.add('border');
-      });
-      button.classList.add('bg-blue-600', 'text-white');
-      button.classList.remove('border');
-    });
-  });
-});
-
-
-
 
   document.getElementById('btn-tilskuertal').addEventListener('click', () => {
     contentArea.innerHTML = `
@@ -182,3 +128,4 @@
 
 </body>
 </html>
+
