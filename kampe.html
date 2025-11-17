@@ -106,30 +106,40 @@
       kampDiv.className = "p-4 rounded-lg border shadow-sm bg-gray-50";
 
       kampDiv.innerHTML = `
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <img src="${flags[match.homeTeam]}" class="w-8 h-8">
-            <span class="font-semibold">${match.homeTeam}</span>
-            <span class="text-lg font-bold mx-2">vs</span>
-            <img src="${flags[match.awayTeam]}" class="w-8 h-8">
-            <span class="font-semibold">${match.awayTeam}</span>
-          </div>
-          <div class="text-sm text-gray-500">${match.date} ${match.time}</div>
-        </div>
+  <div class="flex items-center justify-center gap-12">
 
-        <div class="mt-3 flex items-center gap-2">
-          <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-          <span>-</span>
-          <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-          <button class="saveGuess bg-blue-600 text-white rounded px-3 py-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}" ${isLocked ? 'disabled' : ''}>Gem</button>
-          ${isLocked ? '<span class="text-red-500 text-sm ml-2">Låst</span>' : ''}
-        </div>
+    <!-- Venstre side: Hjemmehold -->
+    <div class="flex flex-col items-center gap-1">
+      <img src="${flags[match.homeTeam]}" class="w-10 h-10">
+      <span class="font-semibold">${match.homeTeam}</span>
+      <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+    </div>
 
-        <div class="mt-2 text-sm text-gray-700">
-          ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
-        </div>
+    <!-- VS midt -->
+    <div class="text-xl font-bold mt-6">vs</div>
 
-        <div class="mt-2 font-semibold">Point: ${points}</div>
+    <!-- Højre side: Udehold -->
+    <div class="flex flex-col items-center gap-1">
+      <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+      <span class="font-semibold">${match.awayTeam}</span>
+      <img src="${flags[match.awayTeam]}" class="w-10 h-10">
+      <span class="text-sm text-gray-500 mt-1">${match.date} ${match.time}</span>
+    </div>
+  </div>
+
+  <!-- Gem-knap -->
+  <div class="mt-2 text-center">
+    <button class="saveGuess bg-blue-600 text-white rounded px-4 py-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}" ${isLocked ? 'disabled' : ''}>Gem gæt</button>
+    ${isLocked ? '<span class="text-red-500 text-sm ml-2">Låst</span>' : ''}
+  </div>
+
+  <!-- Resultat -->
+  <div class="mt-2 text-center text-gray-700">
+    ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
+  </div>
+
+  <!-- Point -->
+  <div class="mt-2 text-center font-semibold">Point: ${points}</div>
 
         ${currentUser.email === ADMIN_EMAIL ? `
           <div class="mt-3 border-t pt-2">
