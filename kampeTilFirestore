@@ -1,0 +1,41 @@
+<button onclick="importMatches()">Importer alle kampe til Firestore</button>
+
+<script>
+async function importMatches() {
+  // Firestore reference
+  const db = firebase.firestore();
+
+  // ⭐ Her skriver du alle dine kampe ind:
+  const matches = [
+    {
+      id: "match1",
+      homeTeam: "Danmark",
+      awayTeam: "Tyskland",
+      homeFlag: "danmark.png",
+      awayFlag: "tyskland.png",
+      date: "2025-11-21",
+      time: "18:00",
+      homeGoals: null,
+      awayGoals: null
+    },
+    {
+      id: "match2",
+      homeTeam: "Frankrig",
+      awayTeam: "Italien",
+      homeFlag: "france.png",
+      awayFlag: "italy.png",
+      date: "2025-11-22",
+      time: "20:00",
+      homeGoals: null,
+      awayGoals: null
+    },
+    // ... fortsæt med dine 10 kampe
+  ];
+
+  for (const match of matches) {
+    await db.collection("matches").doc(match.id).set(match);
+  }
+
+  alert("Alle kampe er importeret til Firestore!");
+}
+</script>
