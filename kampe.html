@@ -5,82 +5,187 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gæt på kampene</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.tailwindcss.com"></script> <!-- hvis du bruger Tailwind -->
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
-<body>
+
+<body class="bg-gray-100">
 
 <header>
-<nav class="menu-bar">
-  <a href="index.html">Forside</a>
-  <a href="gaet.html">Dashboard</a>
-  <a href="contact.html" >Kontakt</a>
-</nav>
-</header
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="contact.html">Kontakt</a>
+  </nav>
+</header>
 
-<main class="max-w-3xl mx-auto p-4">
-  <h1 class="text-3xl font-bold mb-6">Gæt på resultat</h1>
+<main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
+  <h1 class="text-3xl font-bold mb-6 text-center">Gæt på kampene</h1>
 
-  <!-- Dette er containeren, hvor kampkortene indsættes -->
-  <div id="content-area"></div>
+  <p id="user-info" class="text-center text-gray-600 mb-4"></p>
+  <div id="kampe-container" class="space-y-4"></div>
+
+  <div id="total-points" class="text-xl font-semibold text-center mt-6"></div>
 </main>
 
 <script>
-  // Dit dynamiske kampkort-script her
-  const kampe = [
-    { hjemmehold: "Danmark", hjemmeFlag: "danmark.png", udehold: "Tyskland", udeFlag: "tyskland.png", dato: "20/11", tid: "18:00" },
-    { hjemmehold: "Frankrig", hjemmeFlag: "france.png", udehold: "Italien", udeFlag: "italy.png", dato: "21/11", tid: "20:00" },
-    { hjemmehold: "Spanien", hjemmeFlag: "spain.png", udehold: "Portugal", udeFlag: "portugal.png", dato: "22/11", tid: "18:00" }
-  ];
+  // ======================
+  // Firebase setup
+  // ======================
+  const firebaseConfig = {
+    apiKey: "xxx",
+    authDomain: "trampestips.firebaseapp.com",
+    projectId: "trampestips",
+    storageBucket: "trampestips.firebasestorage.app",
+    messagingSenderId: "759235788489",
+    appId: "1:759235788489:web:9515bc438a7c7d68469718",
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
 
-  const contentArea = document.getElementById('content-area');
+  const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
+  const kampeContainer = document.getElementById("kampe-container");
+  const totalPointsEl = document.getElementById("total-points");
+  let currentUser = null;
 
-  kampe.forEach((kamp, index) => {
-    const kampDiv = document.createElement('div');
-    kampDiv.classList.add('bg-white', 'shadow-md', 'rounded-lg', 'p-4', 'mb-4', 'flex', 'flex-col', 'md:flex-row', 'md:items-center', 'md:justify-between', 'gap-4');
-    kampDiv.innerHTML = `
-      <div class="flex items-center gap-4">
-        <div class="flex items-center gap-2">
-          <img src="${kamp.hjemmeFlag}" alt="${kamp.hjemmehold} flag" class="w-8 h-8">
-          <span class="font-semibold">${kamp.hjemmehold}</span>
-        </div>
-        <span class="font-bold text-xl">vs</span>
-        <div class="flex items-center gap-2">
-          <img src="${kamp.udeFlag}" alt="${kamp.udehold} flag" class="w-8 h-8">
-          <span class="font-semibold">${kamp.udehold}</span>
-        </div>
-      </div>
-
-      <div class="flex gap-2 choice-container" data-index="${index}">
-        <button class="choice-btn px-4 py-1 rounded border" data-choice="home">Hjemme</button>
-        <button class="choice-btn px-4 py-1 rounded border" data-choice="draw">Uafgjort</button>
-        <button class="choice-btn px-4 py-1 rounded border" data-choice="away">Ude</button>
-      </div>
-
-      <div class="text-gray-500 text-sm">
-        ${kamp.dato} ${kamp.tid}
-      </div>
-    `;
-    contentArea.appendChild(kampDiv);
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      window.location.href = "gaet.html";
+      return;
+    }
+    currentUser = user;
+    document.getElementById("user-info").textContent = "Logget ind som: " + user.email;
+    await loadKampe();
   });
 
-  const gemBtn = document.createElement('button');
-  gemBtn.classList.add('mt-4', 'w-full', 'bg-blue-600', 'text-white', 'font-semibold', 'py-2', 'rounded', 'hover:bg-blue-700');
-  gemBtn.textContent = "Gem gæt";
-  contentArea.appendChild(gemBtn);
+  // ======================
+  // Hent kampe + gæt
+  // ======================
+  async function loadKampe() {
+    kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
+    const matchesSnap = await db.collection("matches").orderBy("date").get();
+    const guessesSnap = await db.collection("users").doc(currentUser.uid).collection("guesses").get();
+    const guesses = {};
+    guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
+    kampeContainer.innerHTML = "";
 
-  const allButtons = contentArea.querySelectorAll('.choice-btn');
-  allButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const parent = button.parentElement;
-      parent.querySelectorAll('.choice-btn').forEach(btn => {
-        btn.classList.remove('bg-blue-600', 'text-white');
-        btn.classList.add('border');
-      });
-      button.classList.add('bg-blue-600', 'text-white');
-      button.classList.remove('border');
+    let totalPoints = 0;
+
+    matchesSnap.forEach(doc => {
+      const match = { id: doc.id, ...doc.data() };
+      const userGuess = guesses[match.id] || {};
+      const matchDateTime = new Date(match.date + "T" + match.time);
+      const now = new Date();
+      const isLocked = now > new Date(matchDateTime.getTime() - 60 * 60 * 1000);
+
+      let points = 0;
+      if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
+        const correctOutcome = match.homeGoals === match.awayGoals
+          ? "draw"
+          : match.homeGoals > match.awayGoals ? "home" : "away";
+        const userOutcome = userGuess.homeGoals === userGuess.awayGoals
+          ? "draw"
+          : userGuess.homeGoals > userGuess.awayGoals ? "home" : "away";
+
+        if (correctOutcome === userOutcome) points += 1;
+        if (match.homeGoals === userGuess.homeGoals && match.awayGoals === userGuess.awayGoals) points += 2;
+        totalPoints += points;
+      }
+
+      const kampDiv = document.createElement("div");
+      kampDiv.className = "p-4 rounded-lg border shadow-sm bg-gray-50";
+
+      kampDiv.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <img src="${match.homeFlag}" class="w-8 h-8">
+            <span class="font-semibold">${match.homeTeam}</span>
+            <span class="text-lg font-bold mx-2">vs</span>
+            <img src="${match.awayFlag}" class="w-8 h-8">
+            <span class="font-semibold">${match.awayTeam}</span>
+          </div>
+          <div class="text-sm text-gray-500">${match.date} ${match.time}</div>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
+          <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+          <span>-</span>
+          <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+          <button class="saveGuess bg-blue-600 text-white rounded px-3 py-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}" ${isLocked ? 'disabled' : ''}>Gem</button>
+          ${isLocked ? '<span class="text-red-500 text-sm ml-2">Låst</span>' : ''}
+        </div>
+
+        <div class="mt-2 text-sm text-gray-700">
+          ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
+        </div>
+
+        <div class="mt-2 font-semibold">Point: ${points}</div>
+
+        ${currentUser.email === ADMIN_EMAIL ? `
+          <div class="mt-3 border-t pt-2">
+            <h3 class="font-semibold text-sm mb-1 text-gray-600">Admin - indtast resultat</h3>
+            <input type="number" class="adminHome border rounded w-12 text-center" placeholder="H" value="${match.homeGoals ?? ''}">
+            <span>-</span>
+            <input type="number" class="adminAway border rounded w-12 text-center" placeholder="U" value="${match.awayGoals ?? ''}">
+            <button class="saveResult bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700">Gem resultat</button>
+          </div>` : ""}
+      `;
+      kampeContainer.appendChild(kampDiv);
+
+      // Gem gæt
+      const saveBtn = kampDiv.querySelector(".saveGuess");
+      if (saveBtn && !isLocked) {
+        saveBtn.addEventListener("click", async () => {
+          const homeGoals = kampDiv.querySelector(".homeGoals").value;
+          const awayGoals = kampDiv.querySelector(".awayGoals").value;
+          await db.collection("users").doc(currentUser.uid).collection("guesses").doc(match.id)
+            .set({ homeGoals: Number(homeGoals), awayGoals: Number(awayGoals), savedAt: new Date() });
+          alert("Dit gæt er gemt!");
+        });
+      }
+
+      // Gem resultat (admin)
+      const resultBtn = kampDiv.querySelector(".saveResult");
+      if (resultBtn) {
+        resultBtn.addEventListener("click", async () => {
+          const adminHome = kampDiv.querySelector(".adminHome").value;
+          const adminAway = kampDiv.querySelector(".adminAway").value;
+          await db.collection("matches").doc(match.id)
+            .update({ homeGoals: Number(adminHome), awayGoals: Number(adminAway) });
+          alert("Resultat gemt!");
+          loadKampe();
+        });
+      }
     });
-  });
+
+    totalPointsEl.textContent = `Samlet antal point: ${totalPoints}`;
+  }
 </script>
+
+<style>
+  .menu-bar {
+    display: flex;
+    justify-content: center;
+    background-color: #007bff;
+    padding: 10px;
+    gap: 15px;
+  }
+  .menu-bar a {
+    color: white;
+    font-weight: bold;
+    text-decoration: none;
+  }
+  .menu-bar a:hover {
+    text-decoration: underline;
+  }
+</style>
 
 </body>
 </html>
