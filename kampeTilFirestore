@@ -21,11 +21,33 @@ async function importMatches() {
     {
       id: "match2",
       homeTeam: "Frankrig",
-      awayTeam: "Italien",
-      homeFlag: "france.png",
-      awayFlag: "italy.png",
+      awayTeam: "Norge",
+      homeFlag: "frankrig.png",
+      awayFlag: "norge.png",
       date: "2025-11-22",
       time: "20:00",
+      homeGoals: null,
+      awayGoals: null
+    },
+    {
+      id: "match3",
+      homeTeam: "Kroation",
+      awayTeam: "Japan",
+      homeFlag: "kroatien.png",
+      awayFlag: "Japan.png",
+      date: "2025-11-22",
+      time: "22:00",
+      homeGoals: null,
+      awayGoals: null
+    },
+    {
+      id: "match2",
+      homeTeam: "England",
+      awayTeam: "Portugal",
+      homeFlag: "england.png",
+      awayFlag: "portugal.png",
+      date: "2025-11-22",
+      time: "21:00",
       homeGoals: null,
       awayGoals: null
     },
