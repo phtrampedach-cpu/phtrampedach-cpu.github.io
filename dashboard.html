@@ -56,6 +56,10 @@
   // Initialiser app
   const app = firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(function (error) {
+    console.error("Persistence-fejl:", error);
+  });
   const analytics = firebase.analytics(app);
   const db = firebase.firestore();
 

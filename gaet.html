@@ -50,6 +50,10 @@ const firebaseConfig = {
   firebase.initializeApp(firebaseConfig);
 const app = firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();// til login
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+  .catch(function (error) {
+    console.error("Persistence-fejl:", error);
+  });
 const analytics = firebase.analytics(app);  // IKKE getAnalytics()
 const db = firebase.firestore(); // til gæt og point
 
