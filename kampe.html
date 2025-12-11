@@ -30,26 +30,22 @@
 
   <p id="user-info" class="text-center text-gray-600 mb-4"></p>
 
+  <!-- Gem alle-knap -->
+  <div class="text-center mb-4">
+    <button id="save-all-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle gæt</button>
+    <div id="save-notice" class="text-green-600 mt-2 hidden font-semibold"></div>
+  </div>
+
   <!-- ADMIN: Importer kampe -->
   <button id="import-btn" onclick="importMatches()" class="bg-green-600 text-white px-4 py-2 rounded mb-4 hover:bg-green-700">
     Importer alle kampe til Firestore
   </button>
 
-  <!-- Gem alle gæt -->
-  <button id="save-all" class="bg-blue-600 text-white px-4 py-2 rounded mb-4 hover:bg-blue-700">
-    Gem alle gæt
-  </button>
-  <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center"></div>
-
   <div id="kampe-container" class="space-y-4"></div>
-
   <div id="total-points" class="text-xl font-semibold text-center mt-6"></div>
 </main>
 
 <script>
-  // ======================
-  // Firebase setup
-  // ======================
   const firebaseConfig = {
     apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
     authDomain: "trampestips.firebaseapp.com",
@@ -65,9 +61,10 @@
   const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
   const kampeContainer = document.getElementById("kampe-container");
   const totalPointsEl = document.getElementById("total-points");
+  const saveAllBtn = document.getElementById("save-all-btn");
+  const saveNotice = document.getElementById("save-notice");
   let currentUser = null;
 
-  // Lokale flag-stier
   const flags = {
     "Danmark": "Billeder/danmark.png",
     "Tyskland": "Billeder/tyskland.png",
@@ -77,28 +74,20 @@
     "Kroatien": "Billeder/kroatien.png",
     "Norge": "Billeder/norge.png",
     "Portugal": "Billeder/portugal.png",
-    // ... fortsæt med alle 64 flag
+    // ... fortsæt med alle flag
   };
 
-  // ===== Check login =====
   auth.onAuthStateChanged(async (user) => { 
     if (!user) {
       window.location.href = "gaet_login.html";
       return;
     }
-    
     currentUser = user;
     document.getElementById("user-info").textContent = "Logget ind som: " + user.email;
-    
-    // 🔹 Skjul import-knap for alle andre end admin
-    if (currentUser.email !== ADMIN_EMAIL) {
-      document.getElementById("import-btn").style.display = "none";
-    }
-    
+    if (currentUser.email !== ADMIN_EMAIL) document.getElementById("import-btn").style.display = "none";
     await loadKampe();
   });
 
-  // ===== Hent kampe + gæt =====
   async function loadKampe() {
     kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
     const matchesSnap = await db.collection("matches").orderBy("date").get();
@@ -106,20 +95,17 @@
     const guesses = {};
     guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
     kampeContainer.innerHTML = "";
-
     let totalPoints = 0;
 
     matchesSnap.forEach(doc => {
       const match = { id: doc.id, ...doc.data() };
       const userGuess = guesses[match.id] || {};
-
-      const [year, month, day] = match.date.split("-").map(Number); // format YYYY-MM-DD
+      const [day, month] = match.date.split("/").map(Number);
       const [hour, minute] = match.time.split(":").map(Number);
-      const matchDateTime = new Date(year, month-1, day, hour, minute);
+      const matchDateTime = new Date(new Date().getFullYear(), month-1, day, hour, minute);
       const now = new Date();
-      const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000); // 1 time før kamp
+      const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
 
-      // Beregn point
       let points = 0;
       if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
         const correctOutcome = match.homeGoals === match.awayGoals ? "draw" : match.homeGoals > match.awayGoals ? "home" : "away";
@@ -129,126 +115,97 @@
         totalPoints += points;
       }
 
-      // Farver
       let colorClass = "bg-white";
       if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
-        colorClass = points === 3 ? "bg-green-400" : points === 1 ? "bg-blue-400" : "bg-red-400";
+        if (points === 3) colorClass = "bg-green-400";
+        else if (points === 1) colorClass = "bg-blue-400";
+        else colorClass = "bg-red-400";
       }
-      if (isLocked) colorClass = "bg-gray-300"; // mørk hvis låst
+      if (isLocked) colorClass = "bg-gray-300";
 
-      // Kamp div
       const kampDiv = document.createElement("div");
-      kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass} kamp`;
+      kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass}`;
       kampDiv.dataset.matchId = match.id;
+      kampDiv.dataset.isLocked = isLocked;
 
       kampDiv.innerHTML = `
-        <div class="flex items-center justify-center gap-6">
-          <!-- Venstre side -->
-          <div class="flex flex-col items-center gap-1">
-            <img src="${flags[match.homeTeam]}" class="w-8 h-8">
-            <span class="font-semibold">${match.homeTeam}</span>
-            <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-          </div>
+<div class="flex items-center justify-center gap-6">
+  <div class="flex items-center gap-2">
+    <img src="${flags[match.homeTeam]}" class="w-8 h-8">
+    <span class="font-semibold">${match.homeTeam}</span>
+    <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+  </div>
+  <div class="font-bold text-xl mx-4">vs</div>
+  <div class="flex items-center gap-2">
+    <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+    <span class="font-semibold">${match.awayTeam}</span>
+    <img src="${flags[match.awayTeam]}" class="w-8 h-8">
+  </div>
+  <div class="text-sm text-gray-500 ml-4">${match.date} ${match.time}</div>
+</div>
 
-          <!-- VS midten -->
-          <div class="font-bold text-xl mx-4 self-center">vs</div>
+<div class="mt-2 text-sm text-gray-700">
+  ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
+</div>
 
-          <!-- Højre side -->
-          <div class="flex flex-col items-center gap-1">
-            <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-            <span class="font-semibold">${match.awayTeam}</span>
-            <img src="${flags[match.awayTeam]}" class="w-8 h-8">
-          </div>
-
-          <!-- Kampdato/tid -->
-          <div class="text-sm text-gray-500 ml-4 self-center">${match.date} ${match.time}</div>
-        </div>
-
-        <!-- Resultat under -->
-        <div class="mt-2 text-sm text-gray-700">
-          ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
-        </div>
-
-        ${isLocked ? '<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>' : ''}
+${currentUser.email === ADMIN_EMAIL ? `
+<div class="mt-3 border-t pt-2">
+  <h3 class="font-semibold text-sm mb-1 text-gray-600">Admin - indtast resultat</h3>
+  <input type="number" class="adminHome border rounded w-12 text-center" placeholder="H" value="${match.homeGoals ?? ''}">
+  <span>-</span>
+  <input type="number" class="adminAway border rounded w-12 text-center" placeholder="U" value="${match.awayGoals ?? ''}">
+  <button class="saveResult bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700">Gem resultat</button>
+</div>` : ''}
       `;
-
       kampeContainer.appendChild(kampDiv);
+
+      // Admin gem resultat
+      const resultBtn = kampDiv.querySelector(".saveResult");
+      if (resultBtn) {
+        resultBtn.addEventListener("click", async () => {
+          const adminHome = kampDiv.querySelector(".adminHome").value;
+          const adminAway = kampDiv.querySelector(".adminAway").value;
+          await db.collection("matches").doc(match.id)
+            .update({ homeGoals: Number(adminHome), awayGoals: Number(adminAway) });
+          loadKampe();
+        });
+      }
     });
 
     totalPointsEl.textContent = `Samlet antal point: ${totalPoints}`;
   }
 
-  // ===== Gem alle gæt-knap =====
-  document.getElementById("save-all").addEventListener("click", async () => {
-    const kampDivs = document.querySelectorAll('.kamp');
-    const batch = [];
-
-    kampDivs.forEach((kampDiv) => {
+  // Gem alle gæt på én gang
+  saveAllBtn.addEventListener("click", async () => {
+    const kampDivs = document.querySelectorAll("#kampe-container > div");
+    for (const kampDiv of kampDivs) {
+      const isLocked = kampDiv.dataset.isLocked === "true";
+      if (isLocked) continue;
       const matchId = kampDiv.dataset.matchId;
-      const homeInput = kampDiv.querySelector('.homeGoals');
-      const awayInput = kampDiv.querySelector('.awayGoals');
-
-      if (!homeInput.disabled && !awayInput.disabled) {
-        batch.push(
-          db.collection("users")
-            .doc(currentUser.uid)
-            .collection("guesses")
-            .doc(matchId)
-            .set({
-              homeGoals: Number(homeInput.value),
-              awayGoals: Number(awayInput.value),
-              savedAt: new Date()
-            })
-        );
-      }
-    });
-
-    await Promise.all(batch);
-
-    const notice = document.getElementById("save-notice");
-    notice.textContent = "Alle gæt er gemt!";
-    notice.classList.remove("hidden");
-    setTimeout(() => notice.classList.add("hidden"), 2000);
+      const homeGoals = kampDiv.querySelector(".homeGoals").value;
+      const awayGoals = kampDiv.querySelector(".awayGoals").value;
+      await db.collection("users").doc(currentUser.uid)
+        .collection("guesses").doc(matchId)
+        .set({ homeGoals: Number(homeGoals), awayGoals: Number(awayGoals), savedAt: new Date() });
+    }
+    saveNotice.textContent = "Alle gæt er gemt!";
+    saveNotice.classList.remove("hidden");
+    setTimeout(() => saveNotice.classList.add("hidden"), 2000);
+    loadKampe();
   });
 
-  // ===== Admin: Importer kampe =====
   async function importMatches() {
+    const db = firebase.firestore();
     const matches = [
-      {
-        id: "match1",
-        homeTeam: "Danmark",
-        awayTeam: "Tyskland",
-        homeFlag: "danmark.png",
-        awayFlag: "tyskland.png",
-        date: "2025-11-21",
-        time: "18:00",
-        homeGoals: null,
-        awayGoals: null
-      },
-      {
-        id: "match2",
-        homeTeam: "Frankrig",
-        awayTeam: "Norge",
-        homeFlag: "frankrig.png",
-        awayFlag: "norge.png",
-        date: "2025-11-22",
-        time: "20:00",
-        homeGoals: null,
-        awayGoals: null
-      },
-      // ... fortsæt med alle kampe
+      { id:"match1", homeTeam:"Danmark", awayTeam:"Tyskland", homeFlag:"danmark.png", awayFlag:"tyskland.png", date:"21/11", time:"18:00", homeGoals:null, awayGoals:null },
+      { id:"match2", homeTeam:"Frankrig", awayTeam:"Norge", homeFlag:"frankrig.png", awayFlag:"norge.png", date:"22/11", time:"20:00", homeGoals:null, awayGoals:null },
+      // ... tilføj alle kampe
     ];
-
     for (const match of matches) {
       await db.collection("matches").doc(match.id).set(match);
     }
-
-    const notice = document.getElementById("save-notice");
-    notice.textContent = "Alle kampe er importeret!";
-    notice.classList.remove("hidden");
-    setTimeout(() => notice.classList.add("hidden"), 2000);
+    alert("Alle kampe er importeret til Firestore!");
   }
-
 </script>
 
 <style>
@@ -264,9 +221,7 @@
   font-weight: bold;
   text-decoration: none;
 }
-.menu-bar a:hover {
-  text-decoration: underline;
-}
+.menu-bar a:hover { text-decoration: underline; }
 </style>
 
 </body>
