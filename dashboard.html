@@ -69,7 +69,7 @@
     if (user) {
       userInfo.textContent = "Du er logget ind som: " + user.email;
     } else {
-      window.location.href = "gaet.html";
+      window.location.href = "gaet_login.html";
     }
   });
 
@@ -86,7 +86,7 @@
   // ===== Log ud =====
   document.getElementById('btn-logout').addEventListener('click', () => {
     auth.signOut().then(() => {
-      window.location.href = "gaet.html";
+      window.location.href = "gaet_login.html";
     });
   });
 </script>
