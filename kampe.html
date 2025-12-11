@@ -143,7 +143,9 @@ auth.onAuthStateChanged(async (user) => {
 
 // Lav kampkort
     const kampDiv = document.createElement("div");
-    kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass}`;
+kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass} kamp`;
+kampDiv.dataset.matchId = match.id; // <- vigtigt for "Gem alle"
+
 
       kampDiv.innerHTML = `
       <div class="flex items-center justify-center gap-6">
@@ -185,6 +187,7 @@ auth.onAuthStateChanged(async (user) => {
             <button class="saveResult bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700">Gem resultat</button>
           </div>` : ""}
       `;
+      
       kampeContainer.appendChild(kampDiv);
 
 
