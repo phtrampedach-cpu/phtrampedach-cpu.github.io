@@ -36,11 +36,6 @@
     <div id="save-notice" class="text-green-600 mt-2 hidden font-semibold"></div>
   </div>
 
-  <!-- ADMIN: Importer kampe -->
-  <button id="import-btn" onclick="importMatches()" class="bg-green-600 text-white px-4 py-2 rounded mb-4 hover:bg-green-700">
-    Importer alle kampe til Firestore
-  </button>
-
   <div id="kampe-container" class="space-y-4"></div>
   <div id="total-points" class="text-xl font-semibold text-center mt-6"></div>
 </main>
@@ -58,7 +53,6 @@
   const auth = firebase.auth();
   const db = firebase.firestore();
 
-  const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
   const kampeContainer = document.getElementById("kampe-container");
   const totalPointsEl = document.getElementById("total-points");
   const saveAllBtn = document.getElementById("save-all-btn");
@@ -74,7 +68,7 @@
     "Kroatien": "Billeder/kroatien.png",
     "Norge": "Billeder/norge.png",
     "Portugal": "Billeder/portugal.png",
-    // ... fortsæt med alle flag
+    // ... tilføj resten af flagene
   };
 
   auth.onAuthStateChanged(async (user) => { 
@@ -84,7 +78,6 @@
     }
     currentUser = user;
     document.getElementById("user-info").textContent = "Logget ind som: " + user.email;
-    if (currentUser.email !== ADMIN_EMAIL) document.getElementById("import-btn").style.display = "none";
     await loadKampe();
   });
 
@@ -148,28 +141,10 @@
   ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
 </div>
 
-${currentUser.email === ADMIN_EMAIL ? `
-<div class="mt-3 border-t pt-2">
-  <h3 class="font-semibold text-sm mb-1 text-gray-600">Admin - indtast resultat</h3>
-  <input type="number" class="adminHome border rounded w-12 text-center" placeholder="H" value="${match.homeGoals ?? ''}">
-  <span>-</span>
-  <input type="number" class="adminAway border rounded w-12 text-center" placeholder="U" value="${match.awayGoals ?? ''}">
-  <button class="saveResult bg-green-600 text-white rounded px-3 py-1 hover:bg-green-700">Gem resultat</button>
-</div>` : ''}
+${isLocked ? '<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>' : ''}
       `;
-      kampeContainer.appendChild(kampDiv);
 
-      // Admin gem resultat
-      const resultBtn = kampDiv.querySelector(".saveResult");
-      if (resultBtn) {
-        resultBtn.addEventListener("click", async () => {
-          const adminHome = kampDiv.querySelector(".adminHome").value;
-          const adminAway = kampDiv.querySelector(".adminAway").value;
-          await db.collection("matches").doc(match.id)
-            .update({ homeGoals: Number(adminHome), awayGoals: Number(adminAway) });
-          loadKampe();
-        });
-      }
+      kampeContainer.appendChild(kampDiv);
     });
 
     totalPointsEl.textContent = `Samlet antal point: ${totalPoints}`;
@@ -193,19 +168,6 @@ ${currentUser.email === ADMIN_EMAIL ? `
     setTimeout(() => saveNotice.classList.add("hidden"), 2000);
     loadKampe();
   });
-
-  async function importMatches() {
-    const db = firebase.firestore();
-    const matches = [
-      { id:"match1", homeTeam:"Danmark", awayTeam:"Tyskland", homeFlag:"danmark.png", awayFlag:"tyskland.png", date:"21/11", time:"18:00", homeGoals:null, awayGoals:null },
-      { id:"match2", homeTeam:"Frankrig", awayTeam:"Norge", homeFlag:"frankrig.png", awayFlag:"norge.png", date:"22/11", time:"20:00", homeGoals:null, awayGoals:null },
-      // ... tilføj alle kampe
-    ];
-    for (const match of matches) {
-      await db.collection("matches").doc(match.id).set(match);
-    }
-    alert("Alle kampe er importeret til Firestore!");
-  }
 </script>
 
 <style>
