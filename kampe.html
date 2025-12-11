@@ -99,79 +99,79 @@ auth.onAuthStateChanged(async (user) => {
 
   async function loadKampe() {
     kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
-    const matchesSnap = await db.collection("matches").orderBy("date").get();
-    const guessesSnap = await db.collection("users").doc(currentUser.uid).collection("guesses").get();
-    const guesses = {};
-    guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
-    kampeContainer.innerHTML = "";
+  // Hent kampe og brugerens gæt
+  const matchesSnap = await db.collection("matches").orderBy("dateTime").get();
+  const guessesSnap = await db.collection("users").doc(currentUser.uid).collection("guesses").get();
+  const guesses = {};
+  guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
+  kampeContainer.innerHTML = "";
 
     let totalPoints = 0;
 
     matchesSnap.forEach(doc => {
-      const match = { id: doc.id, ...doc.data() };
-      const userGuess = guesses[match.id] || {};
-      const [day, month] = match.date.split("/").map(Number);
-      const [hour, minute] = match.time.split(":").map(Number);
-      const matchDateTime = new Date(match.dateTime); // match.dateTime = "2025-11-21T18:00"
-      const now = new Date();
-      const isLocked = now >= new Date(matchDateTime.getTime() - 60*60*1000);
+    const match = { id: doc.id, ...doc.data() };
+    const userGuess = guesses[match.id] || {};
+
+    const matchDateTime = new Date(match.dateTime); // Forvent "YYYY-MM-DDTHH:mm"
+    const now = new Date();
+    const isLocked = now >= new Date(matchDateTime.getTime() - 60*60*1000);
 
 
-      let points = 0;
-      if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
-        const correctOutcome = match.homeGoals === match.awayGoals
-          ? "draw" : match.homeGoals > match.awayGoals ? "home" : "away";
-        const userOutcome = userGuess.homeGoals === userGuess.awayGoals
-          ? "draw" : userGuess.homeGoals > userGuess.awayGoals ? "home" : "away";
-        if (correctOutcome === userOutcome) points += 1;
-        if (match.homeGoals === userGuess.homeGoals && match.awayGoals === userGuess.awayGoals) points += 2;
-        totalPoints += points;
-      }
 
-      const kampDiv = document.createElement("div");
-      kampDiv.setAttribute("data-match-id", match.id);
+      // Beregn point
+    let points = 0;
+    if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
+      const correctOutcome = match.homeGoals === match.awayGoals
+        ? "draw" : match.homeGoals > match.awayGoals ? "home" : "away";
+      const userOutcome = userGuess.homeGoals === userGuess.awayGoals
+        ? "draw" : userGuess.homeGoals > userGuess.awayGoals ? "home" : "away";
 
-      let colorClass = "bg-white"; // standard hvis ingen point
-
-if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
-    if (points === 3) {
-        colorClass = "bg-green-400"; // præcis
-    } else if (points === 1) {
-        colorClass = "bg-blue-400"; // korrekt resultat
-    } else {
-        colorClass = "bg-red-400"; // forkert
+      if (correctOutcome === userOutcome) points += 1;
+      if (match.homeGoals === userGuess.homeGoals && match.awayGoals === userGuess.awayGoals) points += 2;
+      totalPoints += points;
     }
-}
 
-kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass}`;
+    // Farveindikator
+    let colorClass = "bg-white";
+    if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
+      if (points === 3) colorClass = "bg-green-400";
+      else if (points === 1) colorClass = "bg-blue-400";
+      else colorClass = "bg-red-400";
+    } else if (isLocked) {
+      colorClass = "bg-gray-300"; // mørk boks hvis låst
+    }
+
+// Lav kampkort
+    const kampDiv = document.createElement("div");
+    kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass}`;
 
       kampDiv.innerHTML = `
-  <div class="flex items-center justify-center gap-6">
-    <!-- Venstre side -->
-    <div class="flex items-center gap-2">
-      <img src="${flags[match.homeTeam]}" class="w-8 h-8">
-      <span class="font-semibold">${match.homeTeam}</span>
-      <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-    </div>
+      <div class="flex items-center justify-center gap-6">
+        <!-- Venstre side -->
+        <div class="flex flex-col items-center gap-1">
+          <img src="${flags[match.homeTeam]}" class="w-8 h-8">
+          <span class="font-semibold">${match.homeTeam}</span>
+          <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+        </div>
 
-    <!-- VS midten -->
-    <div class="font-bold text-xl mx-4">vs</div>
+        <!-- VS midten -->
+        <div class="font-bold text-xl mx-4">vs</div>
 
-    <!-- Højre side -->
-    <div class="flex items-center gap-2">
-      <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-      <span class="font-semibold">${match.awayTeam}</span>
-      <img src="${flags[match.awayTeam]}" class="w-8 h-8">
-    </div>
+        <!-- Højre side -->
+        <div class="flex flex-col items-center gap-1">
+          <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+          <span class="font-semibold">${match.awayTeam}</span>
+          <img src="${flags[match.awayTeam]}" class="w-8 h-8">
+        </div>
 
     <!-- Kampdato/tid -->
-    <div class="text-sm text-gray-500 ml-4">${match.date} ${match.time}</div>
-  </div>
+        <div class="text-sm text-gray-500 ml-4">${match.dateTime.replace("T"," ")}</div>
+      </div>
 
-  <!-- Resultat under -->
-  <div class="mt-2 text-sm text-gray-700">
-    ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
-  </div>
+      <!-- Resultat under -->
+      <div class="mt-2 text-sm text-gray-700">
+        ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
+      </div>
 
   ${isLocked ? '<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>' : ''}
 
@@ -229,10 +229,10 @@ awayInput.disabled = isLocked;
 notice.textContent = "Alle gæt er gemt!";
 notice.classList.remove("hidden");
 
-// Fjern notifikationen efter 5 sekunder
+// Fjern notifikationen efter 2 sekunder
 setTimeout(() => {
   notice.classList.add("hidden");
-}, 5000);
+}, 2000);
 
 loadKampe(); // Opdater point
 });
