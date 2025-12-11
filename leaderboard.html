@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+    <meta charset="UTF-8">
+    <title>Leaderboard – Mini Ligaer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100">
+<header>
+  <nav class="menu-bar">
+    <a href="index.html" >Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="leaderboard.html"class="active">Leaderboard</a>
+    <a href="contact.html">Kontakt</a>
+  </nav>
+</header>
+
+
+<div class="max-w-3xl mx-auto mt-6 p-6 bg-white shadow rounded-lg">
+
+    <h1 class="text-2xl font-bold mb-4">Mini Liga – Leaderboard</h1>
+
+    <!-- BRUGERLOGIN -->
+    <div class="mb-6 p-4 border rounded bg-gray-50">
+        <h2 class="text-xl font-semibold mb-2">Brugeroplysninger</h2>
+
+        <label class="block mb-2 font-medium">Vælg brugernavn</label>
+        <input id="usernameInput" type="text" class="border p-2 rounded w-full mb-3" placeholder="Fx. Jonas87">
+
+        <button onclick="saveUsername()" class="bg-blue-500 text-white px-4 py-2 rounded mt-2">
+            Gem brugernavn
+        </button>
+
+        <div id="usernameStatus" class="text-sm mt-2 text-green-600"></div>
+    </div>
+
+    <!-- MINI-LIGA LOGIN -->
+    <div class="mb-6 p-4 border rounded bg-gray-50">
+        <h2 class="text-xl font-semibold mb-2">Find og tilslut dig en mini liga</h2>
+
+        <label class="block mb-2 font-medium">Søg efter liga</label>
+        <input id="searchLeagueInput" type="text" class="border p-2 rounded w-full mb-3" placeholder="Søg efter liga navn...">
+        <button onclick="searchLeagues()" class="bg-gray-700 text-white px-4 py-2 rounded mb-4">
+            Søg
+        </button>
+
+        <div id="searchResults" class="mt-2"></div>
+
+        <h3 class="text-lg font-semibold mt-6">Eller opret en ny liga</h3>
+        <input id="newLeagueName" type="text" class="border p-2 rounded w-full mt-2" placeholder="Navn på liga">
+        <input id="newLeaguePassword" type="password" class="border p-2 rounded w-full mt-2" placeholder="Kode til liga">
+
+        <button onclick="createLeague()" class="bg-green-600 text-white px-4 py-2 rounded mt-4">
+            Opret liga
+        </button>
+
+        <div id="leagueCreateStatus" class="text-sm mt-2 text-green-600"></div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div id="leaderboardSection" class="hidden p-4 border rounded bg-gray-50">
+        <h2 class="text-xl font-semibold mb-4" id="leagueTitle"></h2>
+
+        <table class="w-full border-collapse text-left">
+            <thead>
+                <tr class="border-b bg-gray-200">
+                    <th class="p-2">Bruger</th>
+                    <th class="p-2">Point</th>
+                    <th class="p-2">Korrekt resultat</th>
+                    <th class="p-2">Korrekt udfald</th>
+                </tr>
+            </thead>
+            <tbody id="leaderboardTable"></tbody>
+        </table>
+    </div>
+
+</div>
+
+<script>
+// --------------------------------------------------
+// DATASTRUKTURER I LOCALSTORAGE
+// --------------------------------------------------
+
+function getLeagues() {
+    return JSON.parse(localStorage.getItem("miniLeagues") || "[]");
+}
+
+function saveLeagues(leagues) {
+    localStorage.setItem("miniLeagues", JSON.stringify(leagues));
+}
+
+function getUserResults() {
+    return JSON.parse(localStorage.getItem("userGuesses") || "{}");
+}
+
+function getMatches() {
+    return JSON.parse(localStorage.getItem("kampData") || "[]");
+}
+
+// --------------------------------------------------
+// BRUGERLOGIN
+// --------------------------------------------------
+
+function saveUsername() {
+    const name = document.getElementById("usernameInput").value.trim();
+    if (name.length < 2) {
+        alert("Brugernavnet skal være mindst 2 tegn");
+        return;
+    }
+    localStorage.setItem("currentUsername", name);
+    document.getElementById("usernameStatus").innerText = "Brugernavn gemt: " + name;
+}
+
+function getUsername() {
+    return localStorage.getItem("currentUsername") || null;
+}
+
+// --------------------------------------------------
+// OPRET NY LIGA
+// --------------------------------------------------
+
+function createLeague() {
+    const name = document.getElementById("newLeagueName").value.trim();
+    const pass = document.getElementById("newLeaguePassword").value.trim();
+
+    if (!name || !pass) {
+        alert("Udfyld både navn og kode");
+        return;
+    }
+
+    const leagues = getLeagues();
+    
+    // Check for existing name
+    if (leagues.find(l => l.name.toLowerCase() === name.toLowerCase())) {
+        alert("En liga med dette navn findes allerede.");
+        return;
+    }
+
+    leagues.push({
+        name,
+        password: pass,
+        users: []  // liste over brugere i ligaen
+    });
+
+    saveLeagues(leagues);
+
+    document.getElementById("leagueCreateStatus").innerText = "Liga oprettet.";
+}
+
+// --------------------------------------------------
+// SØG LIGA
+// --------------------------------------------------
+
+function searchLeagues() {
+    const query = document.getElementById("searchLeagueInput").value.trim().toLowerCase();
+    const leagues = getLeagues();
+
+    const filtered = leagues.filter(l => l.name.toLowerCase().includes(query));
+
+    const resultDiv = document.getElementById("searchResults");
+    resultDiv.innerHTML = "";
+
+    if (filtered.length === 0) {
+        resultDiv.innerHTML = "<p>Ingen ligaer fundet.</p>";
+        return;
+    }
+
+    filtered.forEach(league => {
+        const div = document.createElement("div");
+        div.className = "p-3 border rounded bg-white mb-2";
+
+        div.innerHTML = `
+            <div class="font-semibold">${league.name}</div>
+            <input type="password" id="pw_${league.name}" placeholder="Indtast kode" class="border rounded p-1 w-48 mt-2">
+            <button onclick="joinLeague('${league.name}')" class="bg-blue-600 text-white px-3 py-1 rounded ml-2">Join</button>
+        `;
+
+        resultDiv.appendChild(div);
+    });
+}
+
+// --------------------------------------------------
+// JOIN LIGA
+// --------------------------------------------------
+
+function joinLeague(name) {
+    const leagues = getLeagues();
+    const league = leagues.find(l => l.name === name);
+
+    const pw = document.getElementById("pw_" + name).value;
+    if (pw !== league.password) {
+        alert("Forkert kode.");
+        return;
+    }
+
+    const username = getUsername();
+    if (!username) {
+        alert("Vælg et brugernavn først.");
+        return;
+    }
+
+    if (!league.users.includes(username)) {
+        league.users.push(username);
+        saveLeagues(leagues);
+    }
+
+    loadLeaderboard(league);
+}
+
+// --------------------------------------------------
+// BEREGN POINT
+// --------------------------------------------------
+
+function calculateUserStats(username) {
+    const guesses = getUserResults();
+    const guessMap = guesses[username] || {};
+
+    const matches = getMatches();
+
+    let point = 0;
+    let correctResult = 0;
+    let correctOutcome = 0;
+
+    matches.forEach(m => {
+        if (m.homeGoals == null || m.awayGoals == null) return;
+        if (!guessMap[m.id]) return;
+
+        const g = guessMap[m.id];
+
+        const correct = (g.homeGoals == m.homeGoals) && (g.awayGoals == m.awayGoals);
+        const outcomeCorrect = (
+            (m.homeGoals > m.awayGoals && g.homeGoals > g.awayGoals) ||
+            (m.homeGoals < m.awayGoals && g.homeGoals < g.awayGoals) ||
+            (m.homeGoals == m.awayGoals && g.homeGoals == g.awayGoals)
+        );
+
+        if (correct) {
+            point += 3;
+            correctResult++;
+        } else if (outcomeCorrect) {
+            point += 1;
+            correctOutcome++;
+        }
+    });
+
+    return {
+        username,
+        point,
+        correctResult,
+        correctOutcome
+    };
+}
+
+// --------------------------------------------------
+// LOAD LEADERBOARD
+// --------------------------------------------------
+
+function loadLeaderboard(league) {
+    document.getElementById("leaderboardSection").classList.remove("hidden");
+    document.getElementById("leagueTitle").innerText = "Liga: " + league.name;
+
+    const tbody = document.getElementById("leaderboardTable");
+    tbody.innerHTML = "";
+
+    const stats = league.users.map(u => calculateUserStats(u));
+
+    stats.sort((a, b) => b.point - a.point);
+
+    stats.forEach(s => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b";
+
+        tr.innerHTML = `
+            <td class="p-2 font-semibold">${s.username}</td>
+            <td class="p-2">${s.point}</td>
+            <td class="p-2">${s.correctResult}</td>
+            <td class="p-2">${s.correctOutcome}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+</script>
+
+</body>
+</html>
