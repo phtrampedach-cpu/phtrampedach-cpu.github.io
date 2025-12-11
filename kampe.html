@@ -184,8 +184,12 @@ kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClas
       `;
       kampeContainer.appendChild(kampDiv);
 
+
+      
     // GEM ALLE GÆT PÅ ÉN GANG
 document.getElementById("save-all-guesses").addEventListener("click", async () => {
+
+  const batch = db.batch(); // Batch-start
 
   const allMatchDivs = document.querySelectorAll("[data-match-id]");
 
@@ -200,20 +204,25 @@ document.getElementById("save-all-guesses").addEventListener("click", async () =
     const homeGoals = Number(homeInput.value);
     const awayGoals = Number(awayInput.value);
 
-    await db.collection("users")
-      .doc(currentUser.uid)
-      .collection("guesses")
-      .doc(matchId)
-      .set({
-        homeGoals,
-        awayGoals,
-        savedAt: new Date()
-      });
+    const ref = db.collection("users")
+                  .doc(currentUser.uid)
+                  .collection("guesses")
+                  .doc(matchId);
+
+    batch.set(ref, {
+      homeGoals,
+      awayGoals,
+      savedAt: new Date()
+    });
   }
+
+  // Udfør alt i én realtime forespørgsel
+  await batch.commit();
 
   alert("Alle gæt er gemt!");
   loadKampe();
 });
+
 
 
 
