@@ -121,7 +121,19 @@ auth.onAuthStateChanged(async (user) => {
       }
 
       const kampDiv = document.createElement("div");
-      kampDiv.className = "p-4 rounded-lg border shadow-sm bg-gray-50";
+      let colorClass = "bg-white"; // standard hvis ingen point
+
+if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
+    if (points === 3) {
+        colorClass = "bg-green-200"; // præcis
+    } else if (points === 1) {
+        colorClass = "bg-blue-200"; // korrekt resultat
+    } else {
+        colorClass = "bg-red-200"; // forkert
+    }
+}
+
+kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClass}`;
 
       kampDiv.innerHTML = `
   <div class="flex items-center justify-center gap-6">
