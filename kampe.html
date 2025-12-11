@@ -29,6 +29,8 @@
   <h1 class="text-3xl font-bold mb-6 text-center">Gæt på kampene</h1>
 
   <p id="user-info" class="text-center text-gray-600 mb-4"></p>
+  <div id="save-notice" class="text-center text-white bg-green-600 rounded px-3 py-1 mb-4 hidden"></div>
+
 <!-- ADMIN: Importer kampe -->
 <button id="import-btn" onclick="importMatches()" class="bg-green-600 text-white px-4 py-2 rounded mb-4 hover:bg-green-700">
   Importer alle kampe til Firestore
@@ -219,9 +221,18 @@ document.getElementById("save-all-guesses").addEventListener("click", async () =
   // Udfør alt i én realtime forespørgsel
   await batch.commit();
 
-  alert("Alle gæt er gemt!");
-  loadKampe();
+  const notice = document.getElementById("save-notice");
+notice.textContent = "Alle gæt er gemt!";
+notice.classList.remove("hidden");
+
+// Fjern notifikationen efter 2 sekunder
+setTimeout(() => {
+  notice.classList.add("hidden");
+}, 2000);
+
+loadKampe(); // Opdater point
 });
+
 
 
 
