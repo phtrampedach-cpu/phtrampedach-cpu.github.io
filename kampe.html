@@ -142,35 +142,30 @@
       kampDiv.dataset.matchId = match.id;
 
       kampDiv.innerHTML = `
-        <div class="flex items-center justify-center gap-6">
-          <!-- Venstre side -->
-          <div class="flex flex-col items-center gap-1">
-            <img src="${flags[match.homeTeam]}" class="w-8 h-8">
-            <span class="font-semibold">${match.homeTeam}</span>
-            <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-          </div>
+  <div class="flex items-center justify-between gap-4">
+    <!-- Hjemmehold -->
+    <img src="${flags[match.homeTeam]}" class="w-8 h-8">
+    <span class="font-semibold">${match.homeTeam}</span>
+    <input type="number" min="0" class="homeGoals border rounded w-12 text-center" value="${userGuess.homeGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
 
-          <!-- VS midten -->
-          <div class="font-bold text-xl mx-4 self-center">vs</div>
+    <span class="font-bold text-xl">vs</span>
 
-          <!-- Højre side -->
-          <div class="flex flex-col items-center gap-1">
-            <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
-            <span class="font-semibold">${match.awayTeam}</span>
-            <img src="${flags[match.awayTeam]}" class="w-8 h-8">
-          </div>
+    <!-- Udehold -->
+    <input type="number" min="0" class="awayGoals border rounded w-12 text-center" value="${userGuess.awayGoals ?? ''}" ${isLocked ? 'disabled' : ''}>
+    <span class="font-semibold">${match.awayTeam}</span>
+    <img src="${flags[match.awayTeam]}" class="w-8 h-8">
 
-          <!-- Kampdato/tid -->
-          <div class="text-sm text-gray-500 ml-4 self-center">${match.date} ${match.time}</div>
-        </div>
+    <!-- Kampdato/tid -->
+    <span class="text-sm text-gray-500 ml-4">${match.date} ${match.time}</span>
+  </div>
 
-        <!-- Resultat under -->
-        <div class="mt-2 text-sm text-gray-700">
-          ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
-        </div>
+  <!-- Resultat under -->
+  <div class="mt-2 text-sm text-gray-700">
+    ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
+  </div>
 
-        ${isLocked ? '<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>' : ''}
-      `;
+  ${isLocked ? '<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>' : ''}
+`;
 
       kampeContainer.appendChild(kampDiv);
     });
