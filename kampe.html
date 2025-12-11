@@ -126,6 +126,8 @@ auth.onAuthStateChanged(async (user) => {
       }
 
       const kampDiv = document.createElement("div");
+      kampDiv.setAttribute("data-match-id", match.id);
+
       let colorClass = "bg-white"; // standard hvis ingen point
 
 if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
