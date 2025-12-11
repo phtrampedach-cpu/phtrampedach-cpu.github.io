@@ -125,11 +125,11 @@ auth.onAuthStateChanged(async (user) => {
 
 if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
     if (points === 3) {
-        colorClass = "bg-green-200"; // præcis
+        colorClass = "bg-green-400"; // præcis
     } else if (points === 1) {
-        colorClass = "bg-blue-200"; // korrekt resultat
+        colorClass = "bg-blue-400"; // korrekt resultat
     } else {
-        colorClass = "bg-red-200"; // forkert
+        colorClass = "bg-red-400"; // forkert
     }
 }
 
