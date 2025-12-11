@@ -168,11 +168,8 @@ kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClas
     ${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}
   </div>
 
-  <!-- Gem-knap -->
-  <div class="mt-2">
-    <button class="saveGuess bg-blue-600 text-white rounded px-3 py-1 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}" ${isLocked ? 'disabled' : ''}>Gem</button>
-    ${isLocked ? '<span class="text-red-500 text-sm ml-2">Låst</span>' : ''}
-  </div>
+  ${isLocked ? '<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>' : ''}
+
 
         ${currentUser.email === ADMIN_EMAIL ? `
           <div class="mt-3 border-t pt-2">
