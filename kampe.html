@@ -129,22 +129,23 @@
         totalPoints += points;
       }
 
-      // Farver kun på input-felterne
-let homeColorClass = "";
-let awayColorClass = "";
-
-if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
-    if (points === 3) {
-        homeColorClass = awayColorClass = "bg-green-400";
-    } else if (points === 1) {
-        homeColorClass = awayColorClass = "bg-blue-400";
-    } else {
-        homeColorClass = awayColorClass = "bg-red-400";
-    }
-}
+      // Farver på kort og input
+let cardColorClass = "bg-white"; // standard baggrund
+let inputColorClass = "";         // inputfelter
 
 if (isLocked) {
-    homeColorClass = awayColorClass = "bg-gray-300"; // låst
+    cardColorClass = "bg-gray-300";    // hele kortet mørkegråt hvis låst
+    inputColorClass = "bg-gray-300";   // inputfelterne mørkegrå
+} else if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
+    // Kampen er spillet – farve på kortet afhængig af point
+    if (points === 3) cardColorClass = "bg-green-400";
+    else if (points === 1) cardColorClass = "bg-blue-400";
+    else cardColorClass = "bg-red-400";
+    
+    inputColorClass = "bg-gray-300"; // inputfelter altid mørkegrå når resultat er kommet
+} else {
+    cardColorClass = "bg-white";
+    inputColorClass = ""; // standard hvid til gæt
 }
 
 // Kamp div
