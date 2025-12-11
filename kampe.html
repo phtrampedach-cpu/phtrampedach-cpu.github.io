@@ -180,18 +180,35 @@ kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClas
       `;
       kampeContainer.appendChild(kampDiv);
 
-      // Gem gæt
-      const saveBtn = kampDiv.querySelector(".saveGuess");
-      if (saveBtn && !isLocked) {
-        saveBtn.addEventListener("click", async () => {
-          const homeGoals = kampDiv.querySelector(".homeGoals").value;
-          const awayGoals = kampDiv.querySelector(".awayGoals").value;
-          await db.collection("users").doc(currentUser.uid).collection("guesses").doc(match.id)
-            .set({ homeGoals: Number(homeGoals), awayGoals: Number(awayGoals), savedAt: new Date() });
-          alert("Dit gæt er gemt!");
-          loadKampe(); // opdater point
-        });
+    // Gem gæt
+const saveBtn = kampDiv.querySelector(".saveGuess");
+if (saveBtn) {
+  saveBtn.addEventListener("click", async () => {
+
+      // Hard stop – ingen gæt hvis kampen er låst
+      if (isLocked) {
+          alert("Kampen er låst for gæt. Du kan ikke ændre dit gæt længere.");
+          return;
       }
+
+      const homeGoals = kampDiv.querySelector(".homeGoals").value;
+      const awayGoals = kampDiv.querySelector(".awayGoals").value;
+
+      await db.collection("users")
+        .doc(currentUser.uid)
+        .collection("guesses")
+        .doc(match.id)
+        .set({
+            homeGoals: Number(homeGoals),
+            awayGoals: Number(awayGoals),
+            savedAt: new Date()
+        });
+
+      alert("Dit gæt er gemt!");
+      loadKampe();
+  });
+}
+
 
       // Gem resultat (admin)
       const resultBtn = kampDiv.querySelector(".saveResult");
