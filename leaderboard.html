@@ -113,9 +113,15 @@ function saveUsername() {
     document.getElementById("usernameStatus").innerText = "Brugernavn gemt: " + name;
 }
 
-function getUsername() {
-    return localStorage.getItem("currentUsername") || null;
+function loadSavedUsername() {
+    const saved = localStorage.getItem("currentUsername");
+    if (saved) {
+        document.getElementById("usernameInput").value = saved;
+        document.getElementById("usernameStatus").innerText = "Brugernavn: " + saved;
+    }
+    return saved;
 }
+
 
 // --------------------------------------------------
 // OPRET NY LIGA
@@ -201,13 +207,19 @@ function joinLeague(name) {
         return;
     }
 
+    // Tilføj bruger i ligaen
     if (!league.users.includes(username)) {
         league.users.push(username);
         saveLeagues(leagues);
     }
 
-    loadLeaderboard(league);
+    // GEM LIGA VALG PERMANENT
+    localStorage.setItem("currentLeague", name);
+
+    // VIDERE TIL LEAGUEBOARD
+    window.location.href = "leaderboard_view.html";
 }
+
 
 // --------------------------------------------------
 // BEREGN POINT
