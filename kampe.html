@@ -182,35 +182,37 @@ kampDiv.className = `p-3 rounded-lg border border-gray-300 shadow-md ${colorClas
       `;
       kampeContainer.appendChild(kampDiv);
 
-    // Gem gæt
-const saveBtn = kampDiv.querySelector(".saveGuess");
-if (saveBtn) {
-  saveBtn.addEventListener("click", async () => {
+    // GEM ALLE GÆT PÅ ÉN GANG
+document.getElementById("save-all-guesses").addEventListener("click", async () => {
 
-    // Hard-stop: Tjek lås igen ved klik
-    const now = new Date();
-    if (now > new Date(matchDateTime.getTime() - 60*60*1000)) {
-      alert("Kampen er låst for gæt. Du kan ikke ændre dit gæt længere.");
-      return;
-    }
+  const allMatchDivs = document.querySelectorAll("[data-match-id]");
 
-    const homeGoals = kampDiv.querySelector(".homeGoals").value;
-    const awayGoals = kampDiv.querySelector(".awayGoals").value;
+  for (const div of allMatchDivs) {
+    const matchId = div.getAttribute("data-match-id");
+    const homeInput = div.querySelector(".homeGoals");
+    const awayInput = div.querySelector(".awayGoals");
+
+    // Spring låste kampe over
+    if (homeInput.disabled || awayInput.disabled) continue;
+
+    const homeGoals = Number(homeInput.value);
+    const awayGoals = Number(awayInput.value);
 
     await db.collection("users")
       .doc(currentUser.uid)
       .collection("guesses")
-      .doc(match.id)
+      .doc(matchId)
       .set({
-        homeGoals: Number(homeGoals),
-        awayGoals: Number(awayGoals),
+        homeGoals,
+        awayGoals,
         savedAt: new Date()
       });
+  }
 
-    alert("Dit gæt er gemt!");
-    loadKampe();
-  });
-}
+  alert("Alle gæt er gemt!");
+  loadKampe();
+});
+
 
 
 
