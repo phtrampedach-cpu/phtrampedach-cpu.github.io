@@ -112,9 +112,10 @@ auth.onAuthStateChanged(async (user) => {
       const userGuess = guesses[match.id] || {};
       const [day, month] = match.date.split("/").map(Number);
       const [hour, minute] = match.time.split(":").map(Number);
-      const matchDateTime = new Date(new Date().getFullYear(), month-1, day, hour, minute);
+      const matchDateTime = new Date(match.dateTime); // match.dateTime = "2025-11-21T18:00"
       const now = new Date();
-      const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
+      const isLocked = now >= new Date(matchDateTime.getTime() - 60*60*1000);
+
 
       let points = 0;
       if (match.homeGoals != null && match.awayGoals != null && userGuess.homeGoals != null && userGuess.awayGoals != null) {
@@ -197,8 +198,11 @@ document.getElementById("save-all-guesses").addEventListener("click", async () =
 
   for (const div of allMatchDivs) {
     const matchId = div.getAttribute("data-match-id");
-    const homeInput = div.querySelector(".homeGoals");
-    const awayInput = div.querySelector(".awayGoals");
+    const homeInput = kampDiv.querySelector(".homeGoals");
+    const awayInput = kampDiv.querySelector(".awayGoals");
+homeInput.disabled = isLocked;
+awayInput.disabled = isLocked;
+
 
     // Spring låste kampe over
     if (homeInput.disabled || awayInput.disabled) continue;
@@ -262,7 +266,7 @@ loadKampe(); // Opdater point
       awayTeam: "Tyskland",
       homeFlag: "danmark.png",
       awayFlag: "tyskland.png",
-      date: "2025-13-13",
+      date: "2025-17-12",
       time: "17:00",
       homeGoals: null,
       awayGoals: null
@@ -284,7 +288,7 @@ loadKampe(); // Opdater point
       awayTeam: "Japan",
       homeFlag: "kroatien.png",
       awayFlag: "Japan.png",
-      date: "2025-12-11",
+      date: "2025-11-12",
       time: "19:00",
       homeGoals: null,
       awayGoals: null
