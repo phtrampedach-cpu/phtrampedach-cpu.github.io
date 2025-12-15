@@ -38,7 +38,7 @@
     <button id="save-all" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle gæt</button>
 
     <!-- Admin: Importer kamp -->
-    <button id="import-btn" onclick="importMatches()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Importer alle kampe</button>
+    <button id="import-btn" onclick="importMatches()" style="display:none;" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Importer alle kampe</button>
   </div>
 
   <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center"></div>
@@ -82,27 +82,33 @@
     "Chelsea":"Billeder/chelsea.png",
   };
 
-  // ===== Check login =====
-  auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-      window.location.href = "gaet_login.html";
-      return;
-    }
-    currentUser = user;
+ // ===== Check login =====
+auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "gaet_login.html";
+    return;
+  }
+  currentUser = user;
 
-    const userRef = db.collection("users").doc(user.uid);
-    const userSnap = await userRef.get();
+  const userRef = db.collection("users").doc(user.uid);
+  const userSnap = await userRef.get();
 
-    if (!userSnap.exists || !userSnap.data().username) {
-      window.location.href = "choose_username.html";
-      return;
-    }
+  if (!userSnap.exists || !userSnap.data().username) {
+    window.location.href = "choose_username.html";
+    return;
+  }
 
-    const username = userSnap.data().username;
-    document.getElementById("user-info").textContent = `Logget ind som: ${username}`;
+  const username = userSnap.data().username;
+  document.getElementById("user-info").textContent = `Logget ind som: ${username}`;
 
-    await loadKampe();
-  });
+  // Kun admin kan se import-knappen
+  if (currentUser.email === ADMIN_EMAIL) {
+    document.getElementById("import-btn").style.display = "inline-block";
+  }
+
+  await loadKampe();
+});
+
 
   // ===== Turnering valg =====
   document.querySelectorAll('.tournament-btn').forEach(btn=>{
