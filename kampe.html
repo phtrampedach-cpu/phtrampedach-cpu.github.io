@@ -131,7 +131,11 @@
   // ===== Hent kampe + gæt =====
   async function loadKampe() {
     kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
-    const matchesSnap = await db.collection("matches").orderBy("date").get();
+    const matchesSnap = await db.collection("matches")
+  .where("tournament", "==", selectedTournament)
+  .orderBy("date")
+  .get();
+
     const guessesSnap = await db.collection("users").doc(currentUser.uid).collection("guesses").get();
     const guesses = {};
     guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
