@@ -133,10 +133,12 @@
   // ===== Hent kampe + gæt =====
   async function loadKampe() {
     kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
-    const matchesSnap = await db.collection("matches")
+    const matchesSnap = await db
+  .collection("matches")
   .where("tournament", "==", selectedTournament)
   .orderBy("date")
   .get();
+
 
     const guessesSnap = await db.collection("users").doc(currentUser.uid).collection("guesses").get();
     const guesses = {};
@@ -325,6 +327,26 @@ kampDiv.innerHTML = `
     notice.classList.remove("hidden");
     setTimeout(() => notice.classList.add("hidden"), 2000);
   }
+// ===== Tournament selector =====
+document.querySelectorAll(".tournament-btn").forEach(btn => {
+  btn.addEventListener("click", async () => {
+
+    // Sæt valgt turnering
+    selectedTournament = btn.dataset.tournament;
+
+    // UI: aktiv knap
+    document.querySelectorAll(".tournament-btn").forEach(b => {
+      b.classList.remove("bg-blue-600", "text-white");
+      b.classList.add("bg-gray-300");
+    });
+
+    btn.classList.remove("bg-gray-300");
+    btn.classList.add("bg-blue-600", "text-white");
+
+    // Reload kampe
+    await loadKampe();
+  });
+});
 
 </script>
 
