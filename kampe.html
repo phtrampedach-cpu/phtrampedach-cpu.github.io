@@ -231,19 +231,51 @@ document.getElementById("save-all").addEventListener("click", async ()=>{
 // ===== Import kampene (opdelt) =====
 async function importMatches(){
   const vmMatches=[
-    {id:"VM1", tournament:"VM2026", homeTeam:"Danmark", awayTeam:"Tyskland", homeFlag:"danmark.png", awayFlag:"tyskland.png", date:"2025-12-16", time:"18:00", homeGoals:null, awayGoals:null},
-    {id:"VM2", tournament:"VM2026", homeTeam:"Frankrig", awayTeam:"Norge", homeFlag:"frankrig.png", awayFlag:"norge.png", date:"2025-12-16", time:"19:00", homeGoals:null, awayGoals:null},
-    {id:"VM3", tournament:"VM2026", homeTeam:"Kroatien", awayTeam:"Japan", homeFlag:"kroatien.png", awayFlag:"japan.png", date:"2025-12-16", time:"20:00", homeGoals:null, awayGoals:null},
-    {id:"VM4", tournament:"VM2026", homeTeam:"Frankrig", awayTeam:"Japan", homeFlag:"frankrig.png", awayFlag:"japan.png", date:"2025-12-18", time:"20:30", homeGoals:null, awayGoals:null},
-    {id:"VM5", tournament:"VM2026", homeTeam:"England", awayTeam:"Portugal", homeFlag:"england.png", awayFlag:"portugal.png", date:"2025-12-18", time:"21:00", homeGoals:null, awayGoals:null}
+    {id:"VM1", tournament:"VM2026", 
+    homeTeam:"Danmark", awayTeam:"Tyskland", 
+    homeFlag:"danmark.png", awayFlag:"tyskland.png", 
+    date:"2025-12-16", time:"18:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM2", tournament:"VM2026", 
+    homeTeam:"Frankrig", awayTeam:"Norge", 
+    homeFlag:"frankrig.png", awayFlag:"norge.png", 
+    date:"2025-12-16", time:"19:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM3", tournament:"VM2026", 
+    homeTeam:"Kroatien", awayTeam:"Japan", 
+    homeFlag:"kroatien.png", awayFlag:"japan.png", 
+    date:"2025-12-16", time:"20:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM4", tournament:"VM2026", 
+    homeTeam:"Frankrig", awayTeam:"Japan", 
+    homeFlag:"frankrig.png", awayFlag:"japan.png", 
+    date:"2025-12-18", time:"20:30", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM5", tournament:"VM2026", 
+    homeTeam:"England", awayTeam:"Portugal", 
+    homeFlag:"england.png", awayFlag:"portugal.png", 
+    date:"2025-12-18", time:"21:00", 
+    homeGoals:null, awayGoals:null}
   ];
 
   const superligaMatches=[
-    {id:"SL1", tournament:"Superliga", homeTeam:"FCK", awayTeam:"FC Midtjylland", homeFlag:"fck.png", awayFlag:"fcm.png", date:"2025-12-18", time:"21:00", homeGoals:null, awayGoals:null}
+    {id:"SL1", tournament:"Superliga", 
+    homeTeam:"FCK", awayTeam:"FC Midtjylland", 
+    homeFlag:"fck.png", awayFlag:"fcm.png", 
+    date:"2025-12-18", time:"21:00", 
+    homeGoals:null, awayGoals:null}
   ];
 
   const premierLeagueMatches=[
-    {id:"PL1", tournament:"PremierLeague", homeTeam:"Manchester United", awayTeam:"Chelsea", homeFlag:"manu.png", awayFlag:"chelsea.png", date:"2025-12-20", time:"20:00", homeGoals:null, awayGoals:null}
+    {id:"PL1", tournament:"PremierLeague", 
+    homeTeam:"Manchester United", awayTeam:"Chelsea", 
+    homeFlag:"manu.png", awayFlag:"chelsea.png", 
+    date:"2025-12-20", time:"20:00", 
+    homeGoals:null, awayGoals:null}
   ];
 
   const allMatches=[...vmMatches,...superligaMatches,...premierLeagueMatches];
