@@ -82,22 +82,31 @@
   };
 
   // ===== Check login =====
-  auth.onAuthStateChanged(async (user) => { 
-    if (!user) {
-      window.location.href = "gaet_login.html";
-      return;
-    }
-    
-    currentUser = user;
-    document.getElementById("user-info").textContent = "Logget ind som: " + user.email;
-    
-    // 🔹 Skjul import-knap for alle andre end admin
-    if (currentUser.email !== ADMIN_EMAIL) {
-      document.getElementById("import-btn").style.display = "none";
-    }
-    
-    await loadKampe();
-  });
+ auth.onAuthStateChanged(async (user) => {
+  if (!user) {
+    window.location.href = "gaet_login.html";
+    return;
+  }
+
+  currentUser = user;
+
+  const userRef = db.collection("users").doc(user.uid);
+  const userSnap = await userRef.get();
+
+  // ❗ Hvis brugeren ikke har valgt brugernavn endnu
+  if (!userSnap.exists || !userSnap.data().username) {
+    window.location.href = "choose_username.html";
+    return;
+  }
+
+  // Brugernavn findes → fortsæt normalt
+  const username = userSnap.data().username;
+  document.getElementById("user-info").textContent =
+    `Logget ind som: ${username}`;
+
+  await loadKampe();
+});
+
 
   // ===== Hent kampe + gæt =====
   async function loadKampe() {
