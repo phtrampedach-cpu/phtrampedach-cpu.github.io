@@ -93,7 +93,7 @@
   const userRef = db.collection("users").doc(user.uid);
   const userSnap = await userRef.get();
 
-  // ❗ Hvis brugeren ikke har valgt brugernavn endnu
+  //  Hvis brugeren ikke har valgt brugernavn endnu
   if (!userSnap.exists || !userSnap.data().username) {
     window.location.href = "choose_username.html";
     return;
