@@ -45,6 +45,26 @@
   <div id="kampe-container" class="space-y-4"></div>
 
   <div id="total-points" class="text-xl font-semibold text-center mt-6"></div>
+
+  <div class="flex justify-center gap-3 mb-6" id="tournament-selector">
+
+  <button data-tournament="VM2026"
+    class="tournament-btn bg-blue-600 text-white px-4 py-2 rounded">
+    VM 2026
+  </button>
+
+  <button data-tournament="Superliga"
+    class="tournament-btn bg-gray-300 px-4 py-2 rounded">
+    Superliga
+  </button>
+
+  <button data-tournament="PremierLeague"
+    class="tournament-btn bg-gray-300 px-4 py-2 rounded">
+    Premier League
+  </button>
+
+</div>
+
 </main>
 
 <script>
@@ -228,56 +248,61 @@ kampDiv.innerHTML = `
   async function importMatches() {
     const matches = [
       {
-        id: "match1",
+        id: "vm1",
+        tournament: "VM2026",
         homeTeam: "Danmark",
         awayTeam: "Tyskland",
         homeFlag: "danmark.png",
         awayFlag: "tyskland.png",
-        date: "2025-12-11",
+        date: "2025-16-12",
         time: "18:00",
         homeGoals: null,
         awayGoals: null
       },
       {
-        id: "match2",
+        id: "VM2",
+        tournament: "VM2026",
         homeTeam: "Frankrig",
         awayTeam: "Norge",
         homeFlag: "frankrig.png",
         awayFlag: "norge.png",
-        date: "2025-13-11",
+        date: "2025-16-12",
         time: "19:00",
         homeGoals: null,
         awayGoals: null
       },
       {
-        id: "match3",
+        id: "VM3",
+        tournament: "VM2026",
         homeTeam: "Kroatien",
         awayTeam: "Japan",
         homeFlag: "kroatien.png",
         awayFlag: "japan.png",
-        date: "2025-13-11",
+        date: "2025-16-12",
         time: "20:00",
         homeGoals: null,
         awayGoals: null
       },
       {
-        id: "match4",
+        id: "VM4",
+        tournament: "VM2026",
         homeTeam: "Frankrig",
         awayTeam: "Japan",
         homeFlag: "frankrig.png",
         awayFlag: "japan.png",
-        date: "2025-13-11",
+        date: "2025-18-12",
         time: "20:30",
         homeGoals: null,
         awayGoals: null
       },
       {
-        id: "match5",
+        id: "VM5",
+        tournament: "VM2026",
         homeTeam: "England",
         awayTeam: "Portugal",
         homeFlag: "england.png",
         awayFlag: "portugal.png",
-        date: "2025-13-11",
+        date: "2025-18-12",
         time: "21:00",
         homeGoals: null,
         awayGoals: null

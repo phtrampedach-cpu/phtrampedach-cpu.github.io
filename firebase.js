@@ -17,4 +17,5 @@ const auth = firebase.auth();// til login
 const analytics = firebase.analytics(app);  // IKKE getAnalytics()
 const db = firebase.firestore(); // til gæt og point
 
+let selectedTournament = localStorage.getItem("selectedTournament") || "VM2026";
 
