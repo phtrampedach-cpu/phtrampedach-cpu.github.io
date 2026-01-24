@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Gæt på kampene</title>
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -356,6 +355,51 @@ function calculatePoints(guess, match) {
 }
 </script>
 
+<script>
+async function updateLeaderboardForMatch(matchId) {
+  const matchSnap = await db.collection("matches").doc(matchId).get();
+  if (!matchSnap.exists) return;
+
+  const match = matchSnap.data();
+  const tournament = match.tournament;
+
+  if (match.homeGoals === null || match.awayGoals === null) return;
+
+  const guessesSnap = await db.collection("guesses").get();
+
+  for (const userDoc of guessesSnap.docs) {
+    const userId = userDoc.id;
+    const guess = userDoc.data()[matchId];
+    if (!guess) continue;
+
+    const result = calculatePoints(guess, match);
+
+    if (result.points === 0) continue;
+
+    const userRef = db.collection("users").doc(userId);
+    const userSnap = await userRef.get();
+    if (!userSnap.exists) continue;
+
+    const username = userSnap.data().username;
+
+    const lbRef = db
+      .collection("leaderboards")
+      .doc(tournament)
+      .collection("users")
+      .doc(userId);
+
+    await lbRef.set(
+      {
+        username,
+        points: firebase.firestore.FieldValue.increment(result.points),
+        correctResult: firebase.firestore.FieldValue.increment(result.exact),
+        correctOutcome: firebase.firestore.FieldValue.increment(result.outcome),
+      },
+      { merge: true }
+    );
+  }
+}
+</script>
 
 
 
