@@ -26,7 +26,6 @@
 <main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
   <h1 class="text-3xl font-bold mb-4 text-center">Admin – Kampstyring</h1>
 
-  <!-- Turnering filter -->
   <div class="flex justify-center mb-4">
     <select id="tournamentFilter" class="border px-3 py-2 rounded">
       <option value="">Vælg turnering...</option>
@@ -68,7 +67,7 @@ const tournamentFilter = document.getElementById("tournamentFilter");
 
 let selectedTournament = "";
 
-// ----- Check admin-login -----
+// ----- Admin-login check -----
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = "gaet_login.html"; return; }
   if (user.email !== ADMIN_EMAIL) {
@@ -76,11 +75,10 @@ auth.onAuthStateChanged(async user => {
     window.location.href = "dashboard.html";
     return;
   }
-
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
 });
 
-// ----- Hent og vis kampe for valgt turnering -----
+// ----- Load matches for selected tournament -----
 async function loadMatchesForTournament(tournament) {
   if (!tournament) {
     kampeContainer.innerHTML = `<p class="text-center text-gray-500">Vælg en turnering for at se kampene.</p>`;
@@ -91,15 +89,14 @@ async function loadMatchesForTournament(tournament) {
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
 
   const matchesSnap = await db.collection("matches")
-                              .where("tournament","==",tournament)
-                              .orderBy("date")
-                              .get();
+    .where("tournament","==",tournament)
+    .orderBy("date")
+    .get();
 
   kampeContainer.innerHTML = "";
 
   matchesSnap.forEach(doc => {
     const match = { id: doc.id, ...doc.data() };
-
     const matchDiv = document.createElement("div");
     matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md flex items-center justify-between gap-4";
     matchDiv.dataset.matchId = match.id;
@@ -134,7 +131,7 @@ function calculatePoints(guess, match) {
   return { points: 0, exact: 0, outcome: 0 };
 }
 
-// ----- Opdater leaderboard -----
+// ----- Opdater leaderboard per kamp -----
 async function updateLeaderboardForMatch(matchId) {
   const matchSnap = await db.collection("matches").doc(matchId).get();
   if (!matchSnap.exists) return;
@@ -149,18 +146,19 @@ async function updateLeaderboardForMatch(matchId) {
     const userId = userDoc.id;
     const username = userDoc.data().username;
 
-    const guessSnap = await db
-      .collection("users")
-      .doc(userId)
-      .collection("guesses")
-      .doc(matchId)
-      .get();
+    const guessSnap = await db.collection("users").doc(userId).collection("guesses").doc(matchId).get();
 
-    if (!guessSnap.exists) continue;
+    // Beregn points, også hvis brugeren ikke har gættet
+    let points = 0, correctResult = 0, correctOutcome = 0;
+    if (guessSnap.exists) {
+      const guess = guessSnap.data();
+      const result = calculatePoints(guess, match);
+      points = result.points;
+      correctResult = result.exact;
+      correctOutcome = result.outcome;
+    }
 
-    const guess = guessSnap.data();
-    const newResult = calculatePoints(guess, match);
-
+    // Gem point pr match
     const matchPointRef = db
       .collection("userMatchPoints")
       .doc(tournament)
@@ -169,64 +167,38 @@ async function updateLeaderboardForMatch(matchId) {
       .collection("matches")
       .doc(matchId);
 
-    const oldSnap = await matchPointRef.get();
+    await matchPointRef.set({ points, correctResult, correctOutcome }, { merge: true });
 
-    const oldPoints = oldSnap.exists ? oldSnap.data().points : 0;
-    const oldExact = oldSnap.exists ? oldSnap.data().correctResult : 0;
-    const oldOutcome = oldSnap.exists ? oldSnap.data().correctOutcome : 0;
-
-    const diffPoints = newResult.points - oldPoints;
-    const diffExact = newResult.exact - oldExact;
-    const diffOutcome = newResult.outcome - oldOutcome;
-
-    if (diffPoints === 0 && diffExact === 0 && diffOutcome === 0) continue;
-
-    const lbRef = db
-      .collection("leaderboards")
-      .doc(tournament)
-      .collection("users")
-      .doc(userId);
-
+    // Opdater samlet leaderboard pr user
+    const lbRef = db.collection("leaderboards").doc(tournament).collection("users").doc(userId);
     await lbRef.set({
       username,
-      points: firebase.firestore.FieldValue.increment(diffPoints),
-      correctResult: firebase.firestore.FieldValue.increment(diffExact),
-      correctOutcome: firebase.firestore.FieldValue.increment(diffOutcome),
+      points: firebase.firestore.FieldValue.increment(points),
+      correctResult: firebase.firestore.FieldValue.increment(correctResult),
+      correctOutcome: firebase.firestore.FieldValue.increment(correctOutcome)
     }, { merge: true });
-
-    await matchPointRef.set({
-      points: newResult.points,
-      correctResult: newResult.exact,
-      correctOutcome: newResult.outcome,
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
   }
 }
 
-
-// ----- Gem alle kampe (én ad gangen) -----
+// ----- Gem alle kampe og opdater leaderboard -----
 saveAllBtn.addEventListener('click', async () => {
-  if (!selectedTournament) {
-    alert("Vælg en turnering først!");
-    return;
-  }
+  if (!selectedTournament) { alert("Vælg en turnering først!"); return; }
 
   const matchDivs = document.querySelectorAll('#kampe-container > div');
   saveNotice.textContent = `Gemmer kampe...`;
   saveNotice.classList.remove("hidden");
 
-for (const matchDiv of matchDivs) {
+  for (const matchDiv of matchDivs) {
     const matchId = matchDiv.dataset.matchId;
 
-    let homeVal = matchDiv.querySelector('.homeGoals').value;
-    let awayVal = matchDiv.querySelector('.awayGoals').value;
+    const homeVal = matchDiv.querySelector('.homeGoals').value;
+    const awayVal = matchDiv.querySelector('.awayGoals').value;
 
-    // Gem som null, hvis tomt
     const homeGoals = homeVal === "" ? null : Number(homeVal);
     const awayGoals = awayVal === "" ? null : Number(awayVal);
 
     try {
-      await db.collection("matches").doc(matchId).update({ homeGoals: homeVal, awayGoals: awayVal });
+      await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
       await updateLeaderboardForMatch(matchId);
     } catch (err) {
       console.error(`Fejl ved opdatering af kamp ${matchId}:`, err);
