@@ -203,8 +203,6 @@ async function updateLeaderboardForMatch(matchId) {
   }
 }
 
-await updateLeaderboardForMatch(matchId);
-
 
 // ----- Gem alle kampe (én ad gangen) -----
 saveAllBtn.addEventListener('click', async () => {
@@ -217,14 +215,23 @@ saveAllBtn.addEventListener('click', async () => {
   saveNotice.textContent = `Gemmer kampe...`;
   saveNotice.classList.remove("hidden");
 
-  for (const matchDiv of matchDivs) {
-    const matchId = matchDiv.dataset.matchId;
-    const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
-    const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
+for (const matchDiv of matchDivs) {
+  const matchId = matchDiv.dataset.matchId;
 
-    try {
-      await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
-      await updateLeaderboardForMatch(matchId);
+  const homeVal = matchDiv.querySelector('.homeGoals').value;
+  const awayVal = matchDiv.querySelector('.awayGoals').value;
+
+  // Spring kampen over, hvis resultat ikke er udfyldt
+  if (homeVal === "" || awayVal === "") continue;
+
+  const homeGoals = Number(homeVal);
+  const awayGoals = Number(awayVal);
+
+  try {
+    await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
+    await updateLeaderboardForMatch(matchId);
+
+
     } catch (err) {
       console.error(`Fejl ved opdatering af kamp ${matchId}:`, err);
     }
