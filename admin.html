@@ -221,9 +221,9 @@ for (const matchDiv of matchDivs) {
     let homeVal = matchDiv.querySelector('.homeGoals').value;
     let awayVal = matchDiv.querySelector('.awayGoals').value;
 
-    // Gem som "[BLANK]" hvis tom
-    homeVal = homeVal === "" ? "[BLANK]" : Number(homeVal);
-    awayVal = awayVal === "" ? "[BLANK]" : Number(awayVal);
+    // Gem som null, hvis tomt
+    const homeGoals = homeVal === "" ? null : Number(homeVal);
+    const awayGoals = awayVal === "" ? null : Number(awayVal);
 
     try {
       await db.collection("matches").doc(matchId).update({ homeGoals: homeVal, awayGoals: awayVal });
