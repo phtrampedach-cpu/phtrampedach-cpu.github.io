@@ -29,7 +29,11 @@
 
   <div id="kampe-container" class="space-y-4"></div>
 
-  <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center"></div>
+  <div class="flex justify-center mt-4">
+    <button id="save-all-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle kampe</button>
+  </div>
+
+  <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center mt-2"></div>
 </main>
 
 <script>
@@ -48,6 +52,7 @@ const db = firebase.firestore();
 const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
 const kampeContainer = document.getElementById("kampe-container");
 const saveNotice = document.getElementById("save-notice");
+const saveAllBtn = document.getElementById("save-all-btn");
 
 // ----- Check admin-login -----
 auth.onAuthStateChanged(async user => {
@@ -59,7 +64,6 @@ auth.onAuthStateChanged(async user => {
   }
 
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
-
   await loadAllMatches();
 });
 
@@ -75,6 +79,7 @@ async function loadAllMatches() {
 
     const matchDiv = document.createElement("div");
     matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md flex items-center justify-between gap-4";
+    matchDiv.dataset.matchId = match.id;
 
     matchDiv.innerHTML = `
       <div class="flex items-center gap-2">
@@ -84,28 +89,12 @@ async function loadAllMatches() {
         <input type="number" min="0" class="awayGoals border rounded w-16 text-center" value="${match.awayGoals ?? ''}">
         <span class="font-semibold">${match.awayTeam}</span>
       </div>
-      <div class="flex flex-col items-end gap-2">
+      <div class="flex flex-col items-end gap-1">
         <span class="text-sm text-gray-500">${match.tournament} – ${match.date} ${match.time}</span>
-        <button class="save-btn bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Gem resultat</button>
       </div>
     `;
 
     kampeContainer.appendChild(matchDiv);
-
-    const saveBtn = matchDiv.querySelector('.save-btn');
-    saveBtn.addEventListener('click', async () => {
-      const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
-      const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
-
-      await db.collection("matches").doc(match.id).update({ homeGoals, awayGoals });
-
-      // Opdater leaderboard for denne kamp
-      await updateLeaderboardForMatch(match.id);
-
-      saveNotice.textContent = `Resultat for ${match.homeTeam} vs ${match.awayTeam} gemt!`;
-      saveNotice.classList.remove("hidden");
-      setTimeout(() => saveNotice.classList.add("hidden"), 2000);
-    });
   });
 }
 
@@ -122,6 +111,29 @@ function calculatePoints(guess, match) {
   return { points: 0, exact: 0, outcome: 0 };
 }
 
+// ----- Gem alle kampe på én gang -----
+saveAllBtn.addEventListener('click', async () => {
+  const matchDivs = document.querySelectorAll('#kampe-container > div');
+  const batchUpdates = [];
+
+  for (const matchDiv of matchDivs) {
+    const matchId = matchDiv.dataset.matchId;
+    const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
+    const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
+
+    batchUpdates.push(db.collection("matches").doc(matchId).update({ homeGoals, awayGoals }));
+
+    // Opdater leaderboard for hver kamp
+    batchUpdates.push(updateLeaderboardForMatch(matchId));
+  }
+
+  await Promise.all(batchUpdates);
+
+  saveNotice.textContent = `Alle kampresultater er gemt og leaderboard opdateret!`;
+  saveNotice.classList.remove("hidden");
+  setTimeout(() => saveNotice.classList.add("hidden"), 3000);
+});
+
 // ----- Opdater leaderboard -----
 async function updateLeaderboardForMatch(matchId) {
   const matchSnap = await db.collection("matches").doc(matchId).get();
@@ -130,9 +142,9 @@ async function updateLeaderboardForMatch(matchId) {
   const match = matchSnap.data();
   if (match.homeGoals === null || match.awayGoals === null) return;
 
-  const guessesSnap = await db.collection("users").get();
+  const usersSnap = await db.collection("users").get();
 
-  for (const userDoc of guessesSnap.docs) {
+  for (const userDoc of usersSnap.docs) {
     const userId = userDoc.id;
     const username = userDoc.data().username;
 
@@ -143,12 +155,7 @@ async function updateLeaderboardForMatch(matchId) {
     const result = calculatePoints(guess, match);
     if (result.points === 0) continue;
 
-    const lbRef = db
-      .collection("leaderboards")
-      .doc(match.tournament)
-      .collection("users")
-      .doc(userId);
-
+    const lbRef = db.collection("leaderboards").doc(match.tournament).collection("users").doc(userId);
     await lbRef.set({
       username,
       points: firebase.firestore.FieldValue.increment(result.points),
