@@ -9,13 +9,34 @@
 <body>
   <!-- Menu-bar -->
 <header>
-  <nav class="menu-bar">
+  <nav class="menu-bar" id="menuBar">
     <a href="1Forside.html" class="active">Forside</a>
     <a href="dashboard.html">Dashboard</a>
     <a href="leaderboard.html">Leaderboard</a>
     <a href="2Contact.html">Kontakt</a>
+    <!-- Admin-link indsættes via JS, hvis brugeren er admin -->
   </nav>
 </header>
+
+<script>
+const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
+firebase.auth().onAuthStateChanged(user => {
+  if (!user) return;
+
+  // Tilføj admin-link hvis bruger er admin
+  if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    const menuBar = document.getElementById("menuBar");
+    const exists = Array.from(menuBar.children).some(a => a.href.includes("admin.html"));
+    if (!exists) {
+      const adminLink = document.createElement("a");
+      adminLink.href = "admin.html";
+      adminLink.textContent = "Admin";
+      menuBar.appendChild(adminLink);
+    }
+  }
+});
+</script>
+
 
 
 
