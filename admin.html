@@ -142,28 +142,69 @@ async function updateLeaderboardForMatch(matchId) {
   const match = matchSnap.data();
   if (match.homeGoals === null || match.awayGoals === null) return;
 
+  const tournament = match.tournament;
   const usersSnap = await db.collection("users").get();
 
   for (const userDoc of usersSnap.docs) {
     const userId = userDoc.id;
     const username = userDoc.data().username;
 
-    const guessSnap = await db.collection("users").doc(userId).collection("guesses").doc(matchId).get();
+    const guessSnap = await db
+      .collection("users")
+      .doc(userId)
+      .collection("guesses")
+      .doc(matchId)
+      .get();
+
     if (!guessSnap.exists) continue;
 
     const guess = guessSnap.data();
-    const result = calculatePoints(guess, match);
-    if (result.points === 0) continue;
+    const newResult = calculatePoints(guess, match);
 
-    const lbRef = db.collection("leaderboards").doc(match.tournament).collection("users").doc(userId);
+    const matchPointRef = db
+      .collection("userMatchPoints")
+      .doc(tournament)
+      .collection("users")
+      .doc(userId)
+      .collection("matches")
+      .doc(matchId);
+
+    const oldSnap = await matchPointRef.get();
+
+    const oldPoints = oldSnap.exists ? oldSnap.data().points : 0;
+    const oldExact = oldSnap.exists ? oldSnap.data().correctResult : 0;
+    const oldOutcome = oldSnap.exists ? oldSnap.data().correctOutcome : 0;
+
+    const diffPoints = newResult.points - oldPoints;
+    const diffExact = newResult.exact - oldExact;
+    const diffOutcome = newResult.outcome - oldOutcome;
+
+    if (diffPoints === 0 && diffExact === 0 && diffOutcome === 0) continue;
+
+    const lbRef = db
+      .collection("leaderboards")
+      .doc(tournament)
+      .collection("users")
+      .doc(userId);
+
     await lbRef.set({
       username,
-      points: firebase.firestore.FieldValue.increment(result.points),
-      correctResult: firebase.firestore.FieldValue.increment(result.exact),
-      correctOutcome: firebase.firestore.FieldValue.increment(result.outcome)
+      points: firebase.firestore.FieldValue.increment(diffPoints),
+      correctResult: firebase.firestore.FieldValue.increment(diffExact),
+      correctOutcome: firebase.firestore.FieldValue.increment(diffOutcome),
     }, { merge: true });
+
+    await matchPointRef.set({
+      points: newResult.points,
+      correctResult: newResult.exact,
+      correctOutcome: newResult.outcome,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
   }
 }
+
+await updateLeaderboardForMatch(matchId);
+
 
 // ----- Gem alle kampe (én ad gangen) -----
 saveAllBtn.addEventListener('click', async () => {
