@@ -18,28 +18,6 @@
   </nav>
 </header>
 
-<script>
-const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
-firebase.auth().onAuthStateChanged(user => {
-  if (!user) return;
-
-  // Tilføj admin-link hvis bruger er admin
-  if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-    const menuBar = document.getElementById("menuBar");
-    const exists = Array.from(menuBar.children).some(a => a.href.includes("admin.html"));
-    if (!exists) {
-      const adminLink = document.createElement("a");
-      adminLink.href = "admin.html";
-      adminLink.textContent = "Admin";
-      menuBar.appendChild(adminLink);
-    }
-  }
-});
-</script>
-
-
-
-
 <main>
 <h1>Hej — Og velkommen til Trampes Tips!</h1>
 <p>Dette er en test - Fremtidens Trampes Tips.</p>
@@ -66,5 +44,65 @@ firebase.auth().onAuthStateChanged(user => {
 <script>
 document.getElementById('aar').textContent = new Date().getFullYear();
 </script>
+
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+  // ===== Firebase init =====
+  const firebaseConfig = {
+    apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+    authDomain: "trampestips.firebaseapp.com",
+    projectId: "trampestips",
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) return; // ingen bruger logget ind
+
+    // Tilføj admin-link hvis bruger er admin
+    if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      const menuBar = document.getElementById("menuBar");
+      const exists = Array.from(menuBar.children).some(a => a.href.includes("admin.html"));
+      if (!exists) {
+        const adminLink = document.createElement("a");
+        adminLink.href = "admin.html";
+        adminLink.textContent = "Admin";
+        menuBar.appendChild(adminLink);
+      }
+    }
+
+    // --- Marker aktiv side ---
+    const currentPage = window.location.pathname.split("/").pop();
+    const links = menuBar.querySelectorAll("a");
+    links.forEach(a => {
+      if (a.href.includes(currentPage)) a.classList.add("active");
+      else a.classList.remove("active");
+    });
+  });
+</script>
+
+<style>
+.menu-bar {
+  display: flex;
+  justify-content: center;
+  background-color: #007bff;
+  padding: 10px;
+  gap: 15px;
+}
+.menu-bar a {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+.menu-bar a:hover, .menu-bar a.active {
+  background-color: #0056b3;
+}
+</style>
+
 </body>
 </html>
