@@ -216,22 +216,18 @@ saveAllBtn.addEventListener('click', async () => {
   saveNotice.classList.remove("hidden");
 
 for (const matchDiv of matchDivs) {
-  const matchId = matchDiv.dataset.matchId;
+    const matchId = matchDiv.dataset.matchId;
 
-  const homeVal = matchDiv.querySelector('.homeGoals').value;
-  const awayVal = matchDiv.querySelector('.awayGoals').value;
+    let homeVal = matchDiv.querySelector('.homeGoals').value;
+    let awayVal = matchDiv.querySelector('.awayGoals').value;
 
-  // Spring kampen over, hvis resultat ikke er udfyldt
-  if (homeVal === "" || awayVal === "") continue;
+    // Gem som "[BLANK]" hvis tom
+    homeVal = homeVal === "" ? "[BLANK]" : Number(homeVal);
+    awayVal = awayVal === "" ? "[BLANK]" : Number(awayVal);
 
-  const homeGoals = Number(homeVal);
-  const awayGoals = Number(awayVal);
-
-  try {
-    await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
-    await updateLeaderboardForMatch(matchId);
-
-
+    try {
+      await db.collection("matches").doc(matchId).update({ homeGoals: homeVal, awayGoals: awayVal });
+      await updateLeaderboardForMatch(matchId);
     } catch (err) {
       console.error(`Fejl ved opdatering af kamp ${matchId}:`, err);
     }
