@@ -26,6 +26,7 @@
 <main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
   <h1 class="text-3xl font-bold mb-4 text-center">Admin – Kampstyring</h1>
 
+  <!-- Turnering filter -->
   <div class="flex justify-center mb-4">
     <select id="tournamentFilter" class="border px-3 py-2 rounded">
       <option value="">Vælg turnering...</option>
@@ -67,7 +68,7 @@ const tournamentFilter = document.getElementById("tournamentFilter");
 
 let selectedTournament = "";
 
-// ----- Admin-login check -----
+// ----- Check admin-login -----
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = "gaet_login.html"; return; }
   if (user.email !== ADMIN_EMAIL) {
@@ -78,7 +79,7 @@ auth.onAuthStateChanged(async user => {
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
 });
 
-// ----- Load matches for selected tournament -----
+// ----- Hent og vis kampe for valgt turnering -----
 async function loadMatchesForTournament(tournament) {
   if (!tournament) {
     kampeContainer.innerHTML = `<p class="text-center text-gray-500">Vælg en turnering for at se kampene.</p>`;
@@ -89,9 +90,9 @@ async function loadMatchesForTournament(tournament) {
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
 
   const matchesSnap = await db.collection("matches")
-    .where("tournament","==",tournament)
-    .orderBy("date")
-    .get();
+                              .where("tournament","==",tournament)
+                              .orderBy("date")
+                              .get();
 
   kampeContainer.innerHTML = "";
 
@@ -131,7 +132,7 @@ function calculatePoints(guess, match) {
   return { points: 0, exact: 0, outcome: 0 };
 }
 
-// ----- Opdater leaderboard per kamp -----
+// ----- Opdater leaderboard -----
 async function updateLeaderboardForMatch(matchId) {
   const matchSnap = await db.collection("matches").doc(matchId).get();
   if (!matchSnap.exists) return;
@@ -148,7 +149,6 @@ async function updateLeaderboardForMatch(matchId) {
 
     const guessSnap = await db.collection("users").doc(userId).collection("guesses").doc(matchId).get();
 
-    // Beregn points, også hvis brugeren ikke har gættet
     let points = 0, correctResult = 0, correctOutcome = 0;
     if (guessSnap.exists) {
       const guess = guessSnap.data();
@@ -158,29 +158,38 @@ async function updateLeaderboardForMatch(matchId) {
       correctOutcome = result.outcome;
     }
 
-    // Gem point pr match
-    const matchPointRef = db
-      .collection("userMatchPoints")
-      .doc(tournament)
-      .collection("users")
-      .doc(userId)
-      .collection("matches")
-      .doc(matchId);
+    // Gem point pr. match
+    const matchPointRef = db.collection("userMatchPoints").doc(tournament)
+                             .collection("users").doc(userId)
+                             .collection("matches").doc(matchId);
 
     await matchPointRef.set({ points, correctResult, correctOutcome }, { merge: true });
 
     // Opdater samlet leaderboard pr user
-    const lbRef = db.collection("leaderboards").doc(tournament).collection("users").doc(userId);
-    await lbRef.set({
-      username,
-      points: firebase.firestore.FieldValue.increment(points),
-      correctResult: firebase.firestore.FieldValue.increment(correctResult),
-      correctOutcome: firebase.firestore.FieldValue.increment(correctOutcome)
-    }, { merge: true });
+    const lbRef = db.collection("leaderboards").doc(tournament)
+                    .collection("users").doc(userId);
+    const lbSnap = await lbRef.get();
+
+    if (!lbSnap.exists) {
+      // Opret nyt dokument
+      await lbRef.set({
+        username,
+        points: points,
+        correctResult: correctResult,
+        correctOutcome: correctOutcome
+      });
+    } else {
+      // Opdater eksisterende
+      await lbRef.update({
+        points: firebase.firestore.FieldValue.increment(points),
+        correctResult: firebase.firestore.FieldValue.increment(correctResult),
+        correctOutcome: firebase.firestore.FieldValue.increment(correctOutcome)
+      });
+    }
   }
 }
 
-// ----- Gem alle kampe og opdater leaderboard -----
+// ----- Gem alle kampe -----
 saveAllBtn.addEventListener('click', async () => {
   if (!selectedTournament) { alert("Vælg en turnering først!"); return; }
 
