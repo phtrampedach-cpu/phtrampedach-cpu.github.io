@@ -26,11 +26,11 @@
 <main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
   <h1 class="text-3xl font-bold mb-4 text-center">Admin – Kampstyring</h1>
 
-  <!-- Turnering filter -->
-  <div class="flex justify-center gap-3 mb-4" id="tournament-selector">
-    <button data-tournament="VM2026" class="tournament-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">VM 2026</button>
-    <button data-tournament="Superliga" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Superliga Forår 2026</button>
-    <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
+  <!-- Turnering dropdown -->
+  <div class="flex justify-center gap-3 mb-4">
+    <select id="tournament-select" class="border rounded p-2">
+      <option value="">Indlæs turneringer...</option>
+    </select>
   </div>
 
   <p id="user-info" class="text-center text-gray-600 mb-4"></p>
@@ -61,7 +61,8 @@ const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
 const kampeContainer = document.getElementById("kampe-container");
 const saveNotice = document.getElementById("save-notice");
 const saveAllBtn = document.getElementById("save-all-btn");
-let selectedTournament = "VM2026";
+const tournamentSelect = document.getElementById("tournament-select");
+let selectedTournament = "";
 
 // ----- Admin-login check -----
 auth.onAuthStateChanged(async user => {
@@ -75,26 +76,32 @@ auth.onAuthStateChanged(async user => {
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
   document.getElementById("admin-link").style.display = "inline-block";
 
-  await loadMatchesByTournament(selectedTournament);
+  await loadTournamentOptions();
 });
 
-// ----- Turnering filter -----
-document.querySelectorAll('.tournament-btn').forEach(btn => {
-  btn.addEventListener('click', async () => {
-    selectedTournament = btn.dataset.tournament;
+// ----- Hent turneringer dynamisk -----
+async function loadTournamentOptions() {
+  const matchesSnap = await db.collection("matches").orderBy("date").get();
+  const tournaments = new Set();
+  matchesSnap.forEach(doc => tournaments.add(doc.data().tournament));
 
-    document.querySelectorAll('.tournament-btn').forEach(b => {
-      if(b === btn){
-        b.classList.remove('bg-gray-300','text-gray-800');
-        b.classList.add('bg-blue-600','text-white');
-      } else {
-        b.classList.remove('bg-blue-600','text-white');
-        b.classList.add('bg-gray-300','text-gray-800');
-      }
-    });
-
-    await loadMatchesByTournament(selectedTournament);
+  tournamentSelect.innerHTML = `<option value="">Vælg turnering...</option>`;
+  Array.from(tournaments).forEach(t => {
+    const option = document.createElement("option");
+    option.value = t;
+    option.textContent = t;
+    tournamentSelect.appendChild(option);
   });
+}
+
+// ----- Skift turnering -----
+tournamentSelect.addEventListener('change', async () => {
+  selectedTournament = tournamentSelect.value;
+  if (selectedTournament) {
+    await loadMatchesByTournament(selectedTournament);
+  } else {
+    kampeContainer.innerHTML = "";
+  }
 });
 
 // ----- Hent kampe for valgt turnering -----
@@ -144,6 +151,8 @@ function calculatePoints(guess, match) {
 
 // ----- Gem alle kampe (én ad gangen) -----
 saveAllBtn.addEventListener('click', async () => {
+  if (!selectedTournament) return;
+
   const matchDivs = document.querySelectorAll('#kampe-container > div');
 
   for (const matchDiv of matchDivs) {
