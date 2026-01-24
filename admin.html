@@ -19,17 +19,20 @@
     <a href="dashboard.html">Dashboard</a>
     <a href="kampe.html">Kampe</a>
     <a href="leaderboard.html">Leaderboard</a>
-    <a href="admin.html" id="admin-link" style="display:none;">Admin</a>
+    <a href="admin.html" style="display:none;">Admin</a>
   </nav>
 </header>
 
 <main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
   <h1 class="text-3xl font-bold mb-4 text-center">Admin – Kampstyring</h1>
 
-  <!-- Turnering dropdown -->
-  <div class="flex justify-center gap-3 mb-4">
-    <select id="tournament-select" class="border rounded p-2">
-      <option value="">Indlæs turneringer...</option>
+  <!-- Turnering filter -->
+  <div class="flex justify-center mb-4">
+    <select id="tournamentFilter" class="border px-3 py-2 rounded">
+      <option value="">Vælg turnering...</option>
+      <option value="VM2026">VM 2026</option>
+      <option value="Superliga">Superliga Forår 2026</option>
+      <option value="PremierLeague">Premier League Forår 2026</option>
     </select>
   </div>
 
@@ -61,61 +64,42 @@ const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
 const kampeContainer = document.getElementById("kampe-container");
 const saveNotice = document.getElementById("save-notice");
 const saveAllBtn = document.getElementById("save-all-btn");
-const tournamentSelect = document.getElementById("tournament-select");
+const tournamentFilter = document.getElementById("tournamentFilter");
+
 let selectedTournament = "";
 
-// ----- Admin-login check -----
+// ----- Check admin-login -----
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = "gaet_login.html"; return; }
-  if (user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+  if (user.email !== ADMIN_EMAIL) {
     alert("Kun admin kan tilgå denne side.");
     window.location.href = "dashboard.html";
     return;
   }
 
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
-  document.getElementById("admin-link").style.display = "inline-block";
-
-  await loadTournamentOptions();
 });
 
-// ----- Hent turneringer dynamisk -----
-async function loadTournamentOptions() {
-  const matchesSnap = await db.collection("matches").orderBy("date").get();
-  const tournaments = new Set();
-  matchesSnap.forEach(doc => tournaments.add(doc.data().tournament));
-
-  tournamentSelect.innerHTML = `<option value="">Vælg turnering...</option>`;
-  Array.from(tournaments).forEach(t => {
-    const option = document.createElement("option");
-    option.value = t;
-    option.textContent = t;
-    tournamentSelect.appendChild(option);
-  });
-}
-
-// ----- Skift turnering -----
-tournamentSelect.addEventListener('change', async () => {
-  selectedTournament = tournamentSelect.value;
-  if (selectedTournament) {
-    await loadMatchesByTournament(selectedTournament);
-  } else {
-    kampeContainer.innerHTML = "";
+// ----- Hent og vis kampe for valgt turnering -----
+async function loadMatchesForTournament(tournament) {
+  if (!tournament) {
+    kampeContainer.innerHTML = `<p class="text-center text-gray-500">Vælg en turnering for at se kampene.</p>`;
+    return;
   }
-});
 
-// ----- Hent kampe for valgt turnering -----
-async function loadMatchesByTournament(tournament) {
+  selectedTournament = tournament;
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
 
   const matchesSnap = await db.collection("matches")
-                              .where("tournament", "==", tournament)
+                              .where("tournament","==",tournament)
                               .orderBy("date")
                               .get();
+
   kampeContainer.innerHTML = "";
 
   matchesSnap.forEach(doc => {
     const match = { id: doc.id, ...doc.data() };
+
     const matchDiv = document.createElement("div");
     matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md flex items-center justify-between gap-4";
     matchDiv.dataset.matchId = match.id;
@@ -129,9 +113,10 @@ async function loadMatchesByTournament(tournament) {
         <span class="font-semibold">${match.awayTeam}</span>
       </div>
       <div class="flex flex-col items-end gap-1">
-        <span class="text-sm text-gray-500">${match.tournament} – ${match.date} ${match.time}</span>
+        <span class="text-sm text-gray-500">${match.date} ${match.time}</span>
       </div>
     `;
+
     kampeContainer.appendChild(matchDiv);
   });
 }
@@ -139,7 +124,7 @@ async function loadMatchesByTournament(tournament) {
 // ----- Beregn point -----
 function calculatePoints(guess, match) {
   const exact = guess.homeGoals === match.homeGoals && guess.awayGoals === match.awayGoals;
-  const outcome = 
+  const outcome =
     (match.homeGoals > match.awayGoals && guess.homeGoals > guess.awayGoals) ||
     (match.homeGoals < match.awayGoals && guess.homeGoals < guess.awayGoals) ||
     (match.homeGoals === match.awayGoals && guess.homeGoals === guess.awayGoals);
@@ -148,26 +133,6 @@ function calculatePoints(guess, match) {
   if (outcome) return { points: 1, exact: 0, outcome: 1 };
   return { points: 0, exact: 0, outcome: 0 };
 }
-
-// ----- Gem alle kampe (én ad gangen) -----
-saveAllBtn.addEventListener('click', async () => {
-  if (!selectedTournament) return;
-
-  const matchDivs = document.querySelectorAll('#kampe-container > div');
-
-  for (const matchDiv of matchDivs) {
-    const matchId = matchDiv.dataset.matchId;
-    const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
-    const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
-
-    await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
-    await updateLeaderboardForMatch(matchId);
-  }
-
-  saveNotice.textContent = `Alle kampresultater er gemt og leaderboard opdateret!`;
-  saveNotice.classList.remove("hidden");
-  setTimeout(() => saveNotice.classList.add("hidden"), 3000);
-});
 
 // ----- Opdater leaderboard -----
 async function updateLeaderboardForMatch(matchId) {
@@ -199,6 +164,39 @@ async function updateLeaderboardForMatch(matchId) {
     }, { merge: true });
   }
 }
+
+// ----- Gem alle kampe (én ad gangen) -----
+saveAllBtn.addEventListener('click', async () => {
+  if (!selectedTournament) {
+    alert("Vælg en turnering først!");
+    return;
+  }
+
+  const matchDivs = document.querySelectorAll('#kampe-container > div');
+  saveNotice.textContent = `Gemmer kampe...`;
+  saveNotice.classList.remove("hidden");
+
+  for (const matchDiv of matchDivs) {
+    const matchId = matchDiv.dataset.matchId;
+    const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
+    const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
+
+    try {
+      await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
+      await updateLeaderboardForMatch(matchId);
+    } catch (err) {
+      console.error(`Fejl ved opdatering af kamp ${matchId}:`, err);
+    }
+  }
+
+  saveNotice.textContent = `Alle kampresultater er gemt og leaderboard opdateret!`;
+  setTimeout(() => saveNotice.classList.add("hidden"), 3000);
+});
+
+// ----- Dropdown filter event -----
+tournamentFilter.addEventListener('change', (e) => {
+  loadMatchesForTournament(e.target.value);
+});
 </script>
 
 <style>
