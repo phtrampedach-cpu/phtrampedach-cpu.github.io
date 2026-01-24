@@ -264,24 +264,42 @@ async function importMatches(){
 
   const superligaMatches=[
     {id:"SL1", tournament:"Superliga", 
-    homeTeam:"FCK", awayTeam:"FC Midtjylland", 
-    homeFlag:"fck.png", awayFlag:"fcm.png", 
-    date:"2025-12-18", time:"21:00", 
+    homeTeam:"FC Midtjylland", awayTeam:"FCK", 
+    homeFlag:"fcm.png", awayFlag:"fck.png", 
+    date:"2026-02-08", time:"16:00", 
     homeGoals:null, awayGoals:null},
 
     {id:"SL2", tournament:"Superliga", 
-    homeTeam:"FCK", awayTeam:"Viborg", 
-    homeFlag:"fck.png", awayFlag:"vff.png", 
-    date:"2025-12-18", time:"22:00", 
+    homeTeam:"FCK", awayTeam:"FCN", 
+    homeFlag:"fck.png", awayFlag:"fcn.png", 
+    date:"2026-02-14", time:"17:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL3", tournament:"Superliga", 
+    homeTeam:"OB", awayTeam:"FCK", 
+    homeFlag:"ob.png", awayFlag:"fck.png", 
+    date:"2026-02-21", time:"14:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL4", tournament:"Superliga", 
+    homeTeam:"FCK", awayTeam:"Randers FC", 
+    homeFlag:"fck.png", awayFlag:"rfc.png", 
+    date:"2026-03-01", time:"17:00", 
     homeGoals:null, awayGoals:null}
   ];
 
   const premierLeagueMatches=[
     {id:"PL1", tournament:"PremierLeague", 
-    homeTeam:"Manchester United", awayTeam:"Chelsea", 
-    homeFlag:"manu.png", awayFlag:"chelsea.png", 
-    date:"2025-12-20", time:"20:00", 
+    homeTeam:"Arsenal", awayTeam:"Manchester United", 
+    homeFlag:"arsenal.png", awayFlag:"manu.png", 
+    date:"2026-01-25", time:"17:30", 
     homeGoals:null, awayGoals:null},
+
+    {id:"PL2", tournament:"PremierLeague", 
+    homeTeam:"Manchester United", awayTeam:"Fulham", 
+    homeFlag:"manu.png", awayFlag:"fulham.png", 
+    date:"2026-02-01", time:"15:00", 
+    homeGoals:null, awayGoals:null}
   ];
 
   const allMatches=[...vmMatches,...superligaMatches,...premierLeagueMatches];
