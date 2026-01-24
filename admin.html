@@ -26,7 +26,6 @@
 <main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
   <h1 class="text-3xl font-bold mb-4 text-center">Admin – Kampstyring</h1>
 
-  <!-- Turnering filter -->
   <div class="flex justify-center mb-4">
     <select id="tournamentFilter" class="border px-3 py-2 rounded">
       <option value="">Vælg turnering...</option>
@@ -37,13 +36,10 @@
   </div>
 
   <p id="user-info" class="text-center text-gray-600 mb-4"></p>
-
   <div id="kampe-container" class="space-y-4"></div>
-
   <div class="flex justify-center mt-4">
     <button id="save-all-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle kampe</button>
   </div>
-
   <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center mt-2"></div>
 </main>
 
@@ -65,44 +61,36 @@ const kampeContainer = document.getElementById("kampe-container");
 const saveNotice = document.getElementById("save-notice");
 const saveAllBtn = document.getElementById("save-all-btn");
 const tournamentFilter = document.getElementById("tournamentFilter");
-
 let selectedTournament = "";
 
 // ----- Check admin-login -----
 auth.onAuthStateChanged(async user => {
-  if (!user) { window.location.href = "gaet_login.html"; return; }
-  if (user.email !== ADMIN_EMAIL) {
-    alert("Kun admin kan tilgå denne side.");
-    window.location.href = "dashboard.html";
+  if (!user || user.email !== ADMIN_EMAIL) {
+    window.location.href = "gaet_login.html";
     return;
   }
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
 });
 
-// ----- Hent og vis kampe for valgt turnering -----
+// ----- Load matches -----
 async function loadMatchesForTournament(tournament) {
   if (!tournament) {
-    kampeContainer.innerHTML = `<p class="text-center text-gray-500">Vælg en turnering for at se kampene.</p>`;
+    kampeContainer.innerHTML = `<p class="text-center text-gray-500">Vælg en turnering.</p>`;
     return;
   }
-
   selectedTournament = tournament;
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
-
   const matchesSnap = await db.collection("matches")
-                              .where("tournament","==",tournament)
-                              .orderBy("date")
-                              .get();
-
+    .where("tournament","==",tournament)
+    .orderBy("date").get();
   kampeContainer.innerHTML = "";
 
   matchesSnap.forEach(doc => {
     const match = { id: doc.id, ...doc.data() };
-    const matchDiv = document.createElement("div");
-    matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md flex items-center justify-between gap-4";
-    matchDiv.dataset.matchId = match.id;
-
-    matchDiv.innerHTML = `
+    const div = document.createElement("div");
+    div.className = "p-3 rounded-lg border flex justify-between items-center gap-4";
+    div.dataset.matchId = match.id;
+    div.innerHTML = `
       <div class="flex items-center gap-2">
         <span class="font-semibold">${match.homeTeam}</span>
         <input type="number" min="0" class="homeGoals border rounded w-16 text-center" value="${match.homeGoals ?? ''}">
@@ -110,29 +98,26 @@ async function loadMatchesForTournament(tournament) {
         <input type="number" min="0" class="awayGoals border rounded w-16 text-center" value="${match.awayGoals ?? ''}">
         <span class="font-semibold">${match.awayTeam}</span>
       </div>
-      <div class="flex flex-col items-end gap-1">
-        <span class="text-sm text-gray-500">${match.date} ${match.time}</span>
-      </div>
+      <div class="text-sm text-gray-500">${match.date} ${match.time}</div>
     `;
-
-    kampeContainer.appendChild(matchDiv);
+    kampeContainer.appendChild(div);
   });
 }
 
-// ----- Beregn point -----
+// ----- Calculate points -----
 function calculatePoints(guess, match) {
   const exact = guess.homeGoals === match.homeGoals && guess.awayGoals === match.awayGoals;
   const outcome =
-    (match.homeGoals > match.awayGoals && guess.homeGoals > guess.awayGoals) ||
-    (match.homeGoals < match.awayGoals && guess.homeGoals < guess.awayGoals) ||
-    (match.homeGoals === match.awayGoals && guess.homeGoals === guess.awayGoals);
+    (guess.homeGoals > guess.awayGoals && match.homeGoals > match.awayGoals) ||
+    (guess.homeGoals < guess.awayGoals && match.homeGoals < match.awayGoals) ||
+    (guess.homeGoals === guess.awayGoals && match.homeGoals === match.awayGoals);
 
   if (exact) return { points: 3, exact: 1, outcome: 0 };
   if (outcome) return { points: 1, exact: 0, outcome: 1 };
   return { points: 0, exact: 0, outcome: 0 };
 }
 
-// ----- Opdater leaderboard -----
+// ----- Update leaderboard -----
 async function updateLeaderboardForMatch(matchId) {
   const matchSnap = await db.collection("matches").doc(matchId).get();
   if (!matchSnap.exists) return;
@@ -147,81 +132,55 @@ async function updateLeaderboardForMatch(matchId) {
     const userId = userDoc.id;
     const username = userDoc.data().username;
 
-    const guessSnap = await db.collection("users").doc(userId).collection("guesses").doc(matchId).get();
+    const guessSnap = await db.collection("users").doc(userId)
+      .collection("guesses").doc(matchId).get();
 
-    let points = 0, correctResult = 0, correctOutcome = 0;
-    if (guessSnap.exists) {
-      const guess = guessSnap.data();
-      const result = calculatePoints(guess, match);
-      points = result.points;
-      correctResult = result.exact;
-      correctOutcome = result.outcome;
-    }
+    const guess = guessSnap.exists ? guessSnap.data() : {homeGoals:null, awayGoals:null};
+    const result = calculatePoints(guess, match);
 
-    // Gem point pr. match
-    const matchPointRef = db.collection("userMatchPoints").doc(tournament)
-                             .collection("users").doc(userId)
-                             .collection("matches").doc(matchId);
+    // Save per match
+    await db.collection("userMatchPoints").doc(tournament)
+      .collection("users").doc(userId)
+      .collection("matches").doc(matchId)
+      .set(result);
 
-    await matchPointRef.set({ points, correctResult, correctOutcome }, { merge: true });
-
-    // Opdater samlet leaderboard pr user
-    const lbRef = db.collection("leaderboards").doc(tournament)
-                    .collection("users").doc(userId);
-    const lbSnap = await lbRef.get();
-
-    if (!lbSnap.exists) {
-      // Opret nyt dokument
-      await lbRef.set({
+    // Update total leaderboard
+    await db.collection("leaderboards").doc(tournament)
+      .collection("users").doc(userId)
+      .set({
         username,
-        points: points,
-        correctResult: correctResult,
-        correctOutcome: correctOutcome
-      });
-    } else {
-      // Opdater eksisterende
-      await lbRef.update({
-        points: firebase.firestore.FieldValue.increment(points),
-        correctResult: firebase.firestore.FieldValue.increment(correctResult),
-        correctOutcome: firebase.firestore.FieldValue.increment(correctOutcome)
-      });
-    }
+        points: firebase.firestore.FieldValue.increment(result.points),
+        correctResult: firebase.firestore.FieldValue.increment(result.exact),
+        correctOutcome: firebase.firestore.FieldValue.increment(result.outcome)
+      }, { merge: true });
   }
 }
 
-// ----- Gem alle kampe -----
+// ----- Save all matches -----
 saveAllBtn.addEventListener('click', async () => {
-  if (!selectedTournament) { alert("Vælg en turnering først!"); return; }
-
-  const matchDivs = document.querySelectorAll('#kampe-container > div');
-  saveNotice.textContent = `Gemmer kampe...`;
+  if (!selectedTournament) { alert("Vælg en turnering!"); return; }
+  saveNotice.textContent = "Gemmer kampe...";
   saveNotice.classList.remove("hidden");
 
-  for (const matchDiv of matchDivs) {
-    const matchId = matchDiv.dataset.matchId;
+  const matchDivs = document.querySelectorAll('#kampe-container > div');
 
-    const homeVal = matchDiv.querySelector('.homeGoals').value;
-    const awayVal = matchDiv.querySelector('.awayGoals').value;
+  for (const div of matchDivs) {
+    const matchId = div.dataset.matchId;
+    const home = div.querySelector('.homeGoals').value;
+    const away = div.querySelector('.awayGoals').value;
+    const homeGoals = home === "" ? null : Number(home);
+    const awayGoals = away === "" ? null : Number(away);
 
-    const homeGoals = homeVal === "" ? null : Number(homeVal);
-    const awayGoals = awayVal === "" ? null : Number(awayVal);
-
-    try {
-      await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
-      await updateLeaderboardForMatch(matchId);
-    } catch (err) {
-      console.error(`Fejl ved opdatering af kamp ${matchId}:`, err);
-    }
+    await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
+    await updateLeaderboardForMatch(matchId);
   }
 
-  saveNotice.textContent = `Alle kampresultater er gemt og leaderboard opdateret!`;
+  saveNotice.textContent = "Alle kampe er gemt og leaderboard opdateret!";
   setTimeout(() => saveNotice.classList.add("hidden"), 3000);
 });
 
-// ----- Dropdown filter event -----
-tournamentFilter.addEventListener('change', (e) => {
-  loadMatchesForTournament(e.target.value);
-});
+// ----- Tournament dropdown -----
+tournamentFilter.addEventListener('change', e => loadMatchesForTournament(e.target.value));
 </script>
 
 <style>
@@ -237,9 +196,7 @@ tournamentFilter.addEventListener('change', (e) => {
   font-weight: bold;
   text-decoration: none;
 }
-.menu-bar a:hover, .menu-bar a.active {
-  text-decoration: underline;
-}
+.menu-bar a:hover, .menu-bar a.active { text-decoration: underline; }
 </style>
 
 </body>
