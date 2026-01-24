@@ -19,7 +19,7 @@
     <a href="dashboard.html">Dashboard</a>
     <a href="kampe.html">Kampe</a>
     <a href="leaderboard.html">Leaderboard</a>
-    <a href="admin.html" style="display:none;">Admin</a>
+    <a href="admin.html" id="admin-link" style="display:none;">Admin</a>
   </nav>
 </header>
 
@@ -57,34 +57,58 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
+const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
 const kampeContainer = document.getElementById("kampe-container");
 const saveNotice = document.getElementById("save-notice");
 const saveAllBtn = document.getElementById("save-all-btn");
+let selectedTournament = "VM2026";
 
-// ----- Check admin-login -----
+// ----- Admin-login check -----
 auth.onAuthStateChanged(async user => {
   if (!user) { window.location.href = "gaet_login.html"; return; }
-  if (user.email !== ADMIN_EMAIL) {
+  if (user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
     alert("Kun admin kan tilgå denne side.");
     window.location.href = "dashboard.html";
     return;
   }
 
   document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
-  await loadAllMatches();
+  document.getElementById("admin-link").style.display = "inline-block";
+
+  await loadMatchesByTournament(selectedTournament);
 });
 
-// ----- Hent og vis alle kampe -----
-async function loadAllMatches() {
+// ----- Turnering filter -----
+document.querySelectorAll('.tournament-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    selectedTournament = btn.dataset.tournament;
+
+    document.querySelectorAll('.tournament-btn').forEach(b => {
+      if(b === btn){
+        b.classList.remove('bg-gray-300','text-gray-800');
+        b.classList.add('bg-blue-600','text-white');
+      } else {
+        b.classList.remove('bg-blue-600','text-white');
+        b.classList.add('bg-gray-300','text-gray-800');
+      }
+    });
+
+    await loadMatchesByTournament(selectedTournament);
+  });
+});
+
+// ----- Hent kampe for valgt turnering -----
+async function loadMatchesByTournament(tournament) {
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
 
-  const matchesSnap = await db.collection("matches").orderBy("date").get();
+  const matchesSnap = await db.collection("matches")
+                              .where("tournament", "==", tournament)
+                              .orderBy("date")
+                              .get();
   kampeContainer.innerHTML = "";
 
   matchesSnap.forEach(doc => {
     const match = { id: doc.id, ...doc.data() };
-
     const matchDiv = document.createElement("div");
     matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md flex items-center justify-between gap-4";
     matchDiv.dataset.matchId = match.id;
@@ -101,7 +125,6 @@ async function loadAllMatches() {
         <span class="text-sm text-gray-500">${match.tournament} – ${match.date} ${match.time}</span>
       </div>
     `;
-
     kampeContainer.appendChild(matchDiv);
   });
 }
@@ -119,23 +142,18 @@ function calculatePoints(guess, match) {
   return { points: 0, exact: 0, outcome: 0 };
 }
 
-// ----- Gem alle kampe på én gang -----
+// ----- Gem alle kampe (én ad gangen) -----
 saveAllBtn.addEventListener('click', async () => {
   const matchDivs = document.querySelectorAll('#kampe-container > div');
-  const batchUpdates = [];
 
   for (const matchDiv of matchDivs) {
     const matchId = matchDiv.dataset.matchId;
     const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
     const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
 
-    batchUpdates.push(db.collection("matches").doc(matchId).update({ homeGoals, awayGoals }));
-
-    // Opdater leaderboard for hver kamp
-    batchUpdates.push(updateLeaderboardForMatch(matchId));
+    await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
+    await updateLeaderboardForMatch(matchId);
   }
-
-  await Promise.all(batchUpdates);
 
   saveNotice.textContent = `Alle kampresultater er gemt og leaderboard opdateret!`;
   saveNotice.classList.remove("hidden");
