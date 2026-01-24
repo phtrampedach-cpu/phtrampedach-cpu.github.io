@@ -333,5 +333,31 @@ async function importMatches(){
 }
 </style>
 
+<script>
+function calculatePoints(guess, match) {
+  const exact =
+    guess.homeGoals === match.homeGoals &&
+    guess.awayGoals === match.awayGoals;
+
+  const outcome =
+    (match.homeGoals > match.awayGoals && guess.homeGoals > guess.awayGoals) ||
+    (match.homeGoals < match.awayGoals && guess.homeGoals < guess.awayGoals) ||
+    (match.homeGoals === match.awayGoals && guess.homeGoals === guess.awayGoals);
+
+  if (exact) {
+    return { points: 3, exact: 1, outcome: 0 };
+  }
+
+  if (outcome) {
+    return { points: 1, exact: 0, outcome: 1 };
+  }
+
+  return { points: 0, exact: 0, outcome: 0 };
+}
+</script>
+
+
+
+
 </body>
 </html>
