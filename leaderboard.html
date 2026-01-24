@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Global Leaderboard</title>
+  <title>Leaderboard</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.tailwindcss.com"></script>
 
@@ -26,13 +26,18 @@
 
 <main class="max-w-4xl mx-auto mt-8 p-6 bg-white shadow rounded-lg">
 
-  <h1 class="text-3xl font-bold text-center mb-6">
-    🌍 Global Leaderboard
-  </h1>
+  <h1 class="text-3xl font-bold text-center mb-6">Leaderboard</h1>
 
-  <div id="loading" class="text-center text-gray-500">
-    Indlæser leaderboard...
+  <div class="flex justify-center mb-4">
+    <select id="tournamentFilter" class="border px-3 py-2 rounded">
+      <option value="">Vælg turnering...</option>
+      <option value="VM2026">VM 2026</option>
+      <option value="Superliga">Superliga Forår 2026</option>
+      <option value="PremierLeague">Premier League Forår 2026</option>
+    </select>
   </div>
+
+  <div id="loading" class="text-center text-gray-500">Indlæser leaderboard...</div>
 
   <table class="w-full border-collapse hidden" id="leaderboard-table">
     <thead>
@@ -50,105 +55,67 @@
 </main>
 
 <script>
-  // ================= Firebase =================
-  const firebaseConfig = {
-    apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
-    authDomain: "trampestips.firebaseapp.com",
-    projectId: "trampestips",
-    storageBucket: "trampestips.firebasestorage.app",
-    messagingSenderId: "759235788489",
-    appId: "1:759235788489:web:9515bc438a7c7d68469718",
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+const tournamentFilter = document.getElementById("tournamentFilter");
+const leaderboardBody = document.getElementById("leaderboard-body");
+const table = document.getElementById("leaderboard-table");
+const loading = document.getElementById("loading");
 
-  // ================= Auth check =================
-  auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-      window.location.href = "gaet_login.html";
-      return;
-    }
-    await loadGlobalLeaderboard();
-  });
+// Auth check
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    window.location.href = "gaet_login.html";
+    return;
+  }
+});
 
-  // ================= Leaderboard logic =================
-  async function loadGlobalLeaderboard() {
-    const leaderboardBody = document.getElementById("leaderboard-body");
-    const table = document.getElementById("leaderboard-table");
-    const loading = document.getElementById("loading");
+// Load leaderboard når dropdown ændres
+tournamentFilter.addEventListener("change", () => {
+  const tournament = tournamentFilter.value;
+  if (!tournament) return;
 
-    leaderboardBody.innerHTML = "";
+  loadLeaderboard(tournament);
+});
 
-    // Hent alle færdigspillede kampe
-    const matchesSnap = await db.collection("matches")
-      .where("homeGoals", "!=", null)
-      .get();
+async function loadLeaderboard(tournament) {
+  leaderboardBody.innerHTML = "";
+  loading.classList.remove("hidden");
+  table.classList.add("hidden");
 
-    const matches = {};
-    matchesSnap.forEach(doc => {
-      matches[doc.id] = doc.data();
-    });
+  try {
+    const usersSnap = await db.collection("leaderboards")
+                              .doc(tournament)
+                              .collection("users")
+                              .get();
 
-    // Hent alle brugere
-    const usersSnap = await db.collection("users").get();
+    const leaderboard = usersSnap.docs.map(doc => ({
+      username: doc.data().username,
+      points: doc.data().points ?? 0,
+      correctResult: doc.data().correctResult ?? 0,
+      correctOutcome: doc.data().correctOutcome ?? 0
+    }));
 
-    const leaderboard = [];
-
-    for (const userDoc of usersSnap.docs) {
-      const user = userDoc.data();
-      const guessesSnap = await db
-        .collection("users")
-        .doc(userDoc.id)
-        .collection("guesses")
-        .get();
-
-      let point = 0;
-      let correctResult = 0;
-      let correctOutcome = 0;
-
-      guessesSnap.forEach(gDoc => {
-        const guess = gDoc.data();
-        const match = matches[gDoc.id];
-        if (!match) return;
-
-        const exact =
-          guess.homeGoals === match.homeGoals &&
-          guess.awayGoals === match.awayGoals;
-
-        const outcome =
-          (guess.homeGoals > guess.awayGoals && match.homeGoals > match.awayGoals) ||
-          (guess.homeGoals < guess.awayGoals && match.homeGoals < match.awayGoals) ||
-          (guess.homeGoals === guess.awayGoals && match.homeGoals === match.awayGoals);
-
-        if (exact) {
-          point += 3;
-          correctResult++;
-        } else if (outcome) {
-          point += 1;
-          correctOutcome++;
-        }
-      });
-
-      leaderboard.push({
-        username: user.username,
-        point,
-        correctResult,
-        correctOutcome
-      });
-    }
-
-    leaderboard.sort((a, b) => b.point - a.point);
+    // Sorter efter points
+    leaderboard.sort((a, b) => b.points - a.points);
 
     leaderboard.forEach((u, index) => {
       const tr = document.createElement("tr");
       tr.className = "border-b";
-
       tr.innerHTML = `
         <td class="p-3 font-semibold">${index + 1}</td>
         <td class="p-3">${u.username}</td>
-        <td class="p-3 font-bold">${u.point}</td>
+        <td class="p-3 font-bold">${u.points}</td>
         <td class="p-3">${u.correctResult}</td>
         <td class="p-3">${u.correctOutcome}</td>
       `;
@@ -157,7 +124,12 @@
 
     loading.classList.add("hidden");
     table.classList.remove("hidden");
+
+  } catch (err) {
+    console.error("Fejl ved indlæsning af leaderboard:", err);
+    loading.textContent = "Fejl ved indlæsning af leaderboard.";
   }
+}
 </script>
 
 <style>
@@ -173,8 +145,7 @@
   font-weight: bold;
   text-decoration: none;
 }
-.menu-bar a:hover,
-.menu-bar a.active {
+.menu-bar a:hover, .menu-bar a.active {
   text-decoration: underline;
 }
 </style>
