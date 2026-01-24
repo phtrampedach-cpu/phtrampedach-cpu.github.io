@@ -29,6 +29,12 @@
             class="bg-blue-600 text-white w-full py-2 rounded">
       Log ind
     </button>
+
+  <button onclick="resetPassword()"
+          class="text-sm text-blue-600 underline w-full">
+    Glemt adgangskode?
+  </button>
+
   </div>
 
   <!-- BRUGERNAVN -->
@@ -72,6 +78,25 @@ async function login() {
   const password = document.getElementById("password").value;
 
   await auth.signInWithEmailAndPassword(email, password);
+}
+
+/* ======================
+   Reset password
+====================== */
+async function resetPassword() {
+  const email = document.getElementById("email").value;
+
+  if (!email) {
+    alert("Indtast din email først");
+    return;
+  }
+
+  try {
+    await auth.sendPasswordResetEmail(email);
+    alert("Der er sendt en e-mail med link til nulstilling af adgangskode.");
+  } catch (error) {
+    alert(error.message);
+  }
 }
 
 /* ======================
