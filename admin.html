@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="da">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Admin – Kampstyring</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -17,9 +17,9 @@
   <nav class="menu-bar">
     <a href="1Forside.html">Forside</a>
     <a href="dashboard.html">Dashboard</a>
+    <a href="kampe.html">Kampe</a>
     <a href="leaderboard.html">Leaderboard</a>
-    <a href="admin.html" id="admin-link" style="display:none;">Admin</a>
-    <a href="2Contact.html">Kontakt</a>
+    <a href="admin.html" style="display:none;">Admin</a>
   </nav>
 </header>
 
@@ -32,17 +32,16 @@
     <button data-tournament="Superliga" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Superliga Forår 2026</button>
     <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
   </div>
+  
+  <p id="user-info" class="text-center text-gray-600 mb-4"></p>
 
-  <!-- Gem alle kampe -->
-  <div class="flex justify-center gap-3 mb-4">
-    <button id="save-all" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle kampe</button>
-    <button id="import-btn" onclick="importMatches()" style="display:none;" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Importer alle kampe</button>
+  <div id="kampe-container" class="space-y-4"></div>
+
+  <div class="flex justify-center mt-4">
+    <button id="save-all-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle kampe</button>
   </div>
 
-  <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center"></div>
-
-  <!-- Kampe visning -->
-  <div id="kampe-container" class="space-y-4"></div>
+  <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center mt-2"></div>
 </main>
 
 <script>
@@ -58,115 +57,120 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const ADMIN_EMAIL = "P.H.Trampedach@gmail.com";
-let currentUser = null;
-let selectedTournament = "VM2026";
+const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
+const kampeContainer = document.getElementById("kampe-container");
+const saveNotice = document.getElementById("save-notice");
+const saveAllBtn = document.getElementById("save-all-btn");
 
-// ===== Check login =====
-auth.onAuthStateChanged(async (user) => {
-  if(!user) { window.location.href = "gaet_login.html"; return; }
-  currentUser = user;
-
-  // Kun admin kan se admin-link og import-knap
-  if(currentUser.email === ADMIN_EMAIL){
-    document.getElementById("admin-link").style.display = "inline-block";
-    document.getElementById("import-btn").style.display = "inline-block";
-  } else {
-    window.location.href = "1Forside.html"; // andre kan ikke se admin
+// ----- Check admin-login -----
+auth.onAuthStateChanged(async user => {
+  if (!user) { window.location.href = "gaet_login.html"; return; }
+  if (user.email !== ADMIN_EMAIL) {
+    alert("Kun admin kan tilgå denne side.");
+    window.location.href = "dashboard.html";
+    return;
   }
 
-  await loadKampe();
+  document.getElementById("user-info").textContent = `Logget ind som admin: ${user.email}`;
+  await loadAllMatches();
 });
 
-// ===== Turnering filter =====
-document.querySelectorAll('.tournament-btn').forEach(btn=>{
-  btn.addEventListener('click', async ()=>{
-    selectedTournament = btn.dataset.tournament;
-
-    document.querySelectorAll('.tournament-btn').forEach(b=>{
-      if(b===btn){
-        b.classList.remove('bg-gray-300','text-gray-800');
-        b.classList.add('bg-blue-600','text-white');
-      } else {
-        b.classList.remove('bg-blue-600','text-white');
-        b.classList.add('bg-gray-300','text-gray-800');
-      }
-    });
-
-    await loadKampe();
-  });
-});
-
-// ===== Load kampe =====
-async function loadKampe() {
-  const kampeContainer = document.getElementById("kampe-container");
+// ----- Hent og vis alle kampe -----
+async function loadAllMatches() {
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
 
-  const matchesSnap = await db.collection("matches")
-                              .where("tournament","==",selectedTournament)
-                              .orderBy("date").get();
-
+  const matchesSnap = await db.collection("matches").orderBy("date").get();
   kampeContainer.innerHTML = "";
 
-  matchesSnap.forEach(doc=>{
-    const match = doc.data();
+  matchesSnap.forEach(doc => {
+    const match = { id: doc.id, ...doc.data() };
+
     const matchDiv = document.createElement("div");
-    matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md kamp";
-    matchDiv.dataset.matchId = doc.id;
+    matchDiv.className = "p-3 rounded-lg border border-gray-300 shadow-md flex items-center justify-between gap-4";
+    matchDiv.dataset.matchId = match.id;
+
     matchDiv.innerHTML = `
-      <div class="flex justify-between items-center gap-2">
-        <span>${match.homeTeam} vs ${match.awayTeam}</span>
-        <span>${match.date} ${match.time}</span>
-        <input type="number" placeholder="Hjemme mål" class="homeGoals border rounded w-12 text-center" value="${match.homeGoals??''}">
-        <input type="number" placeholder="Ude mål" class="awayGoals border rounded w-12 text-center" value="${match.awayGoals??''}">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold">${match.homeTeam}</span>
+        <input type="number" min="0" class="homeGoals border rounded w-16 text-center" value="${match.homeGoals ?? ''}">
+        <span class="font-bold text-xl">vs</span>
+        <input type="number" min="0" class="awayGoals border rounded w-16 text-center" value="${match.awayGoals ?? ''}">
+        <span class="font-semibold">${match.awayTeam}</span>
+      </div>
+      <div class="flex flex-col items-end gap-1">
+        <span class="text-sm text-gray-500">${match.tournament} – ${match.date} ${match.time}</span>
       </div>
     `;
+
     kampeContainer.appendChild(matchDiv);
   });
 }
 
-// ===== Gem alle kampe én ad gangen =====
-document.getElementById("save-all").addEventListener("click", async ()=>{
-  const kampDivs = document.querySelectorAll('.kamp');
-  const notice = document.getElementById("save-notice");
-  
-  notice.textContent = "Opdaterer kampene…";
-  notice.classList.remove("hidden");
+// ----- Beregn point -----
+function calculatePoints(guess, match) {
+  const exact = guess.homeGoals === match.homeGoals && guess.awayGoals === match.awayGoals;
+  const outcome = 
+    (match.homeGoals > match.awayGoals && guess.homeGoals > guess.awayGoals) ||
+    (match.homeGoals < match.awayGoals && guess.homeGoals < guess.awayGoals) ||
+    (match.homeGoals === match.awayGoals && guess.homeGoals === guess.awayGoals);
 
-  for(const div of kampDivs){
-    const matchId = div.dataset.matchId;
-    const homeGoals = Number(div.querySelector('.homeGoals').value);
-    const awayGoals = Number(div.querySelector('.awayGoals').value);
+  if (exact) return { points: 3, exact: 1, outcome: 0 };
+  if (outcome) return { points: 1, exact: 0, outcome: 1 };
+  return { points: 0, exact: 0, outcome: 0 };
+}
 
-    try{
-      await db.collection("matches").doc(matchId).update({ homeGoals, awayGoals });
-    } catch(err){
-      console.error(`Fejl ved opdatering af kamp ${matchId}:`, err);
-    }
+// ----- Gem alle kampe på én gang -----
+saveAllBtn.addEventListener('click', async () => {
+  const matchDivs = document.querySelectorAll('#kampe-container > div');
+  const batchUpdates = [];
+
+  for (const matchDiv of matchDivs) {
+    const matchId = matchDiv.dataset.matchId;
+    const homeGoals = Number(matchDiv.querySelector('.homeGoals').value);
+    const awayGoals = Number(matchDiv.querySelector('.awayGoals').value);
+
+    batchUpdates.push(db.collection("matches").doc(matchId).update({ homeGoals, awayGoals }));
+
+    // Opdater leaderboard for hver kamp
+    batchUpdates.push(updateLeaderboardForMatch(matchId));
   }
 
-  notice.textContent = "Alle kampe er opdateret!";
-  setTimeout(()=>notice.classList.add("hidden"), 3000);
+  await Promise.all(batchUpdates);
+
+  saveNotice.textContent = `Alle kampresultater er gemt og leaderboard opdateret!`;
+  saveNotice.classList.remove("hidden");
+  setTimeout(() => saveNotice.classList.add("hidden"), 3000);
 });
 
-// ===== Import kampene (opdelt) =====
-async function importMatches(){
-  const vmMatches=[ /* her indsættes VM kampe */ ];
-  const superligaMatches=[ /* her indsættes Superliga kampe */ ];
-  const premierLeagueMatches=[ /* her indsættes Premier League kampe */ ];
+// ----- Opdater leaderboard -----
+async function updateLeaderboardForMatch(matchId) {
+  const matchSnap = await db.collection("matches").doc(matchId).get();
+  if (!matchSnap.exists) return;
 
-  const allMatches = [...vmMatches, ...superligaMatches, ...premierLeagueMatches];
+  const match = matchSnap.data();
+  if (match.homeGoals === null || match.awayGoals === null) return;
 
-  for(const match of allMatches){
-    await db.collection("matches").doc(match.id).set(match);
+  const usersSnap = await db.collection("users").get();
+
+  for (const userDoc of usersSnap.docs) {
+    const userId = userDoc.id;
+    const username = userDoc.data().username;
+
+    const guessSnap = await db.collection("users").doc(userId).collection("guesses").doc(matchId).get();
+    if (!guessSnap.exists) continue;
+
+    const guess = guessSnap.data();
+    const result = calculatePoints(guess, match);
+    if (result.points === 0) continue;
+
+    const lbRef = db.collection("leaderboards").doc(match.tournament).collection("users").doc(userId);
+    await lbRef.set({
+      username,
+      points: firebase.firestore.FieldValue.increment(result.points),
+      correctResult: firebase.firestore.FieldValue.increment(result.exact),
+      correctOutcome: firebase.firestore.FieldValue.increment(result.outcome)
+    }, { merge: true });
   }
-
-  const notice = document.getElementById("save-notice");
-  notice.textContent = `Alle ${allMatches.length} kampe er importeret!`;
-  notice.classList.remove("hidden");
-  setTimeout(()=>notice.classList.add("hidden"), 3000);
-
-  await loadKampe();
 }
 </script>
 
