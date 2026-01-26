@@ -19,3 +19,4 @@ const db = firebase.firestore(); // til gæt og point
 
 let selectedTournament = localStorage.getItem("selectedTournament") || "VM2026";
 
+
