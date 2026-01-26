@@ -400,8 +400,61 @@ async function updateLeaderboardForMatch(matchId) {
     );
   }
 }
-</script>
 
+
+async function updateLeaderboardForUser(matchId, guess) {
+  const matchSnap = await db.collection("matches").doc(matchId).get();
+  if (!matchSnap.exists) return;
+
+  const match = matchSnap.data();
+
+  // Kampen er ikke færdig
+  if (match.homeGoals === null || match.awayGoals === null) return;
+  if (!match.tournament) return;
+
+  const gDiff = guess.homeGoals - guess.awayGoals;
+  const mDiff = match.homeGoals - match.awayGoals;
+
+  let points = 0;
+  let correctResult = 0;
+  let correctOutcome = 0;
+
+  if (
+    guess.homeGoals === match.homeGoals &&
+    guess.awayGoals === match.awayGoals
+  ) {
+    points = 3;
+    correctResult = 1;
+  } else if (
+    (gDiff > 0 && mDiff > 0) ||
+    (gDiff === 0 && mDiff === 0) ||
+    (gDiff < 0 && mDiff < 0)
+  ) {
+    points = 1;
+    correctOutcome = 1;
+  }
+
+  if (points === 0) return;
+
+  const userSnap = await db.collection("users").doc(auth.currentUser.uid).get();
+  if (!userSnap.exists) return;
+
+  const username = userSnap.data().username ?? "Ukendt";
+
+  await db
+    .collection("leaderboards")
+    .doc(match.tournament)
+    .collection("users")
+    .doc(auth.currentUser.uid)
+    .set({
+      username,
+      points: firebase.firestore.FieldValue.increment(points),
+      correctResult: firebase.firestore.FieldValue.increment(correctResult),
+      correctOutcome: firebase.firestore.FieldValue.increment(correctOutcome),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+}
+</script></0>
 
 
 </body>
