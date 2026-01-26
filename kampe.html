@@ -149,6 +149,8 @@ async function loadKampe() {
     const now = new Date();
     const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
 
+    let homeColor = "";
+    let awayColor = "";
 
 
     const kampDiv=document.createElement("div");
@@ -296,6 +298,9 @@ async function importMatches(){
   for(const match of allMatches){
     await db.collection("matches").doc(match.id).set(match);
   }
+
+  await loadKampe(); // genindlæs kampene automatisk
+
 
   const notice=document.getElementById("save-notice");
   notice.textContent=`Alle ${allMatches.length} kampe er importeret!`;

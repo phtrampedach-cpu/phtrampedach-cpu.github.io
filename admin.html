@@ -24,23 +24,23 @@
 </header>
 
 <main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
-  <h1 class="text-3xl font-bold mb-4 text-center">Admin – Kampstyring</h1>
-
-  <div class="flex justify-center mb-4">
-    <select id="tournamentFilter" class="border px-3 py-2 rounded">
-      <option value="">Vælg turnering...</option>
-      <option value="VM2026">VM 2026</option>
-      <option value="Superliga">Superliga Forår 2026</option>
-      <option value="PremierLeague">Premier League Forår 2026</option>
-    </select>
-  </div>
+  <h1 class="text-3xl font-bold mb-4 text-center">Admin: Indtast kampresultater</h1>
 
   <p id="user-info" class="text-center text-gray-600 mb-4"></p>
-  <div id="kampe-container" class="space-y-4"></div>
-  <div class="flex justify-center mt-4">
-    <button id="save-all-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Gem alle kampe</button>
+
+  <div class="flex justify-center gap-3 mb-4" id="tournament-selector">
+    <button data-tournament="VM2026" class="tournament-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">VM 2026</button>
+    <button data-tournament="Superliga" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Superliga Forår 2026</button>
+    <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
   </div>
-  <div id="save-notice" class="hidden text-green-700 font-semibold mb-2 text-center mt-2"></div>
+
+  <div id="kampe-container" class="space-y-4"></div>
+
+  <div class="flex justify-center mt-4">
+    <button id="save-results" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Gem resultater og opdater point</button>
+  </div>
+
+  <div id="save-notice" class="hidden text-green-700 font-semibold mt-2 text-center"></div>
 </main>
 
 <script>
