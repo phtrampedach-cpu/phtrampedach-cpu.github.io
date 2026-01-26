@@ -454,7 +454,6 @@ async function updateLeaderboardForUser(matchId, guess) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 }
-
 await updateLeaderboardForUser(matchId, guessData);
 
 </script></0>
