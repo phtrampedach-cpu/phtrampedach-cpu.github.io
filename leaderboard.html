@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leaderboard</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body class="bg-gray-100">
@@ -80,7 +80,7 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// Load leaderboard når dropdown ændres
+// Når turnering vælges
 tournamentFilter.addEventListener("change", () => {
   const tournament = tournamentFilter.value;
   if (!tournament) return;
@@ -94,19 +94,20 @@ async function loadLeaderboard(tournament) {
   table.classList.add("hidden");
 
   try {
+    // Hent alle brugere fra leaderboard for valgt turnering
     const usersSnap = await db.collection("leaderboards")
                               .doc(tournament)
                               .collection("users")
                               .get();
 
     const leaderboard = usersSnap.docs.map(doc => ({
-      username: doc.data().username,
+      username: doc.data().username ?? "Uden navn",
       points: doc.data().points ?? 0,
       correctResult: doc.data().correctResult ?? 0,
       correctOutcome: doc.data().correctOutcome ?? 0
     }));
 
-    // Sorter efter points
+    // Sorter efter point
     leaderboard.sort((a, b) => b.points - a.points);
 
     leaderboard.forEach((u, index) => {
@@ -145,9 +146,7 @@ async function loadLeaderboard(tournament) {
   font-weight: bold;
   text-decoration: none;
 }
-.menu-bar a:hover, .menu-bar a.active {
-  text-decoration: underline;
-}
+.menu-bar a:hover, .menu-bar a.active { text-decoration: underline; }
 </style>
 
 </body>
