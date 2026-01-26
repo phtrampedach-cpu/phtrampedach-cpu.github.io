@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="da">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leaderboard</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -10,7 +10,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
-
 <body class="bg-gray-100">
 
 <header>
@@ -31,8 +30,20 @@
     <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
   </div>
 
-  <div id="leaderboard-container" class="space-y-2 text-gray-800">
-    Indlæser...
+  <div id="leaderboard-container" class="overflow-x-auto">
+    <table class="min-w-full text-left border border-gray-300">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-4 py-2 border">Bruger</th>
+          <th class="px-4 py-2 border">Point</th>
+          <th class="px-4 py-2 border">Korrekt resultat</th>
+          <th class="px-4 py-2 border">Korrekt udfald</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body">
+        <tr><td colspan="4" class="text-center py-4">Indlæser...</td></tr>
+      </tbody>
+    </table>
   </div>
 </main>
 
@@ -51,108 +62,72 @@ const db = firebase.firestore();
 
 let selectedTournament = "VM2026";
 
-// ===== Turnering valg =====
+// Turnering valg
 document.querySelectorAll('.tournament-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     selectedTournament = btn.dataset.tournament;
-
     document.querySelectorAll('.tournament-btn').forEach(b => {
-      if(b===btn){
-        b.classList.remove('bg-gray-300','text-gray-800');
-        b.classList.add('bg-blue-600','text-white');
-      } else {
-        b.classList.remove('bg-blue-600','text-white');
-        b.classList.add('bg-gray-300','text-gray-800');
-      }
+      b.classList.remove('bg-blue-600','text-white');
+      b.classList.add('bg-gray-300','text-gray-800');
     });
-
-    loadLeaderboard(selectedTournament);
+    btn.classList.add('bg-blue-600','text-white');
+    await loadLeaderboard();
   });
 });
 
-// ===== Beregn point =====
-function calculatePoints(guess, match) {
-  const exact = guess.homeGoals === match.homeGoals && guess.awayGoals === match.awayGoals;
-  const outcome =
-    (match.homeGoals > match.awayGoals && guess.homeGoals > guess.awayGoals) ||
-    (match.homeGoals < match.awayGoals && guess.homeGoals < guess.awayGoals) ||
-    (match.homeGoals === match.awayGoals && guess.homeGoals === guess.awayGoals);
-
-  if (exact) return { points: 3, exact: 1, outcome: 0 };
-  if (outcome) return { points: 1, exact: 0, outcome: 1 };
-  return { points: 0, exact: 0, outcome: 0 };
-}
-
 // ===== Load leaderboard =====
-async function loadLeaderboard(selectedTournament) {
-  const lbContainer = document.getElementById("leaderboard-container");
-  lbContainer.innerHTML = "Indlæser...";
+async function loadLeaderboard() {
+  const tbody = document.getElementById("leaderboard-body");
+  tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4">Indlæser...</td></tr>`;
 
-  // 1️⃣ Hent alle brugere
+  // Hent alle brugere
   const usersSnap = await db.collection("users").get();
   const users = {};
   usersSnap.forEach(doc => {
-    users[doc.id] = { username: doc.data().username, points: 0, correctResult: 0, correctOutcome: 0 };
+    const data = doc.data();
+    users[doc.id] = {
+      username: data.username || "Ukendt",
+      uid: doc.id
+    };
   });
 
-  // 2️⃣ Hent alle kamp-resultater for turneringen
-  const matchesSnap = await db.collection("matches")
-                              .where("tournament", "==", selectedTournament)
-                              .get();
-  const matches = {};
-  matchesSnap.forEach(doc => {
-    matches[doc.id] = doc.data();
+  // Hent leaderboard for valgt turnering
+  const lbSnap = await db.collection("leaderboards")
+                         .doc(selectedTournament)
+                         .collection("users").get();
+
+  const lbData = {};
+  lbSnap.forEach(doc => {
+    lbData[doc.id] = doc.data();
   });
 
-  // 3️⃣ Beregn point for alle gæt
-  for (const userId in users) {
-    const guessesSnap = await db.collection("users").doc(userId).collection("guesses").get();
-    guessesSnap.forEach(doc => {
-      const guess = doc.data();
-      const match = matches[doc.id];
-      if (!match || match.homeGoals === null || match.awayGoals === null) return;
-
-      const result = calculatePoints(guess, match);
-      users[userId].points += result.points;
-      users[userId].correctResult += result.exact;
-      users[userId].correctOutcome += result.outcome;
+  // Lav array til sortering
+  const rows = [];
+  for (const uid in users) {
+    const userData = lbData[uid] || { points: 0, correctResult: 0, correctOutcome: 0 };
+    rows.push({
+      username: users[uid].username,
+      points: userData.points || 0,
+      correctResult: userData.correctResult || 0,
+      correctOutcome: userData.correctOutcome || 0
     });
   }
 
-  // 4️⃣ Opdater leaderboard i Firestore (opret alle brugere med 0 point)
-  for (const userId in users) {
-    await db.collection("leaderboards")
-            .doc(selectedTournament)
-            .collection("users")
-            .doc(userId)
-            .set({
-              username: users[userId].username,
-              points: users[userId].points,
-              correctResult: users[userId].correctResult,
-              correctOutcome: users[userId].correctOutcome,
-              updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-  }
+  // Sorter efter point (højeste først)
+  rows.sort((a,b) => b.points - a.points);
 
-  // 5️⃣ Vis leaderboard på siden
-  const sortedUsers = Object.values(users).sort((a,b) => b.points - a.points);
-  lbContainer.innerHTML = "";
-  sortedUsers.forEach((u, i) => {
-    const div = document.createElement("div");
-    div.className = "flex justify-between border-b py-2 px-4";
-    div.innerHTML = `
-      <span>${i+1}. ${u.username}</span>
-      <span>${u.points} point</span>
-    `;
-    lbContainer.appendChild(div);
-  });
+  tbody.innerHTML = rows.map(r => `
+    <tr class="border-t border-gray-200">
+      <td class="px-4 py-2 border">${r.username}</td>
+      <td class="px-4 py-2 border">${r.points}</td>
+      <td class="px-4 py-2 border">${r.correctResult}</td>
+      <td class="px-4 py-2 border">${r.correctOutcome}</td>
+    </tr>
+  `).join('');
 }
 
-// ===== Check login =====
-auth.onAuthStateChanged(user => {
-  if (!user) { window.location.href = "gaet_login.html"; return; }
-  loadLeaderboard(selectedTournament);
-});
+// Initial load
+loadLeaderboard();
 </script>
 
 <style>
