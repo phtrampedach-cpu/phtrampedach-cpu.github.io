@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="da">
 <head>
 <meta charset="UTF-8">
@@ -6,52 +6,45 @@
 <title>Leaderboard</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.tailwindcss.com"></script>
-
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
-
 <body class="bg-gray-100">
 
 <header>
   <nav class="menu-bar">
-    <a href="index.html">Forside</a>
+    <a href="index.html" >Forside</a>
     <a href="dashboard.html">Dashboard</a>
-    <a href="leaderboard.html" class="active">Leaderboard</a>
+    <a href="leaderboard.html"class="active">Leaderboard</a>
     <a href="2Contact.html">Kontakt</a>
   </nav>
 </header>
 
-<main class="max-w-4xl mx-auto mt-8 p-6 bg-white shadow rounded-lg">
+<main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
+  <h1 class="text-3xl font-bold mb-4 text-center">Leaderboard</h1>
 
-  <h1 class="text-3xl font-bold text-center mb-6">Leaderboard</h1>
-
-  <div class="flex justify-center mb-4">
-    <select id="tournamentFilter" class="border px-3 py-2 rounded">
-      <option value="">Vælg turnering...</option>
-      <option value="VM2026">VM 2026</option>
-      <option value="Superliga">Superliga Forår 2026</option>
-      <option value="PremierLeague">Premier League Forår 2026</option>
-    </select>
+  <div class="flex justify-center gap-3 mb-4" id="tournament-selector">
+    <button data-tournament="VM2026" class="tournament-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">VM 2026</button>
+    <button data-tournament="Superliga" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Superliga Forår 2026</button>
+    <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
   </div>
 
-  <div id="loading" class="text-center text-gray-500">Indlæser leaderboard...</div>
-
-  <table class="w-full border-collapse hidden" id="leaderboard-table">
-    <thead>
-      <tr class="bg-gray-200 border-b">
-        <th class="p-3 text-left">Placering</th>
-        <th class="p-3 text-left">Bruger</th>
-        <th class="p-3 text-left">Point</th>
-        <th class="p-3 text-left">Korrekt resultat</th>
-        <th class="p-3 text-left">Korrekt udfald</th>
-      </tr>
-    </thead>
-    <tbody id="leaderboard-body"></tbody>
-  </table>
-
+  <div id="leaderboard-container" class="overflow-x-auto">
+    <table class="min-w-full text-left border border-gray-300">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-4 py-2 border">Bruger</th>
+          <th class="px-4 py-2 border">Point</th>
+          <th class="px-4 py-2 border">Korrekt resultat</th>
+          <th class="px-4 py-2 border">Korrekt udfald</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body">
+        <tr><td colspan="4" class="text-center py-4">Indlæser...</td></tr>
+      </tbody>
+    </table>
+  </div>
 </main>
 
 <script>
@@ -59,78 +52,79 @@ const firebaseConfig = {
   apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
   authDomain: "trampestips.firebaseapp.com",
   projectId: "trampestips",
-  storageBucket: "trampestips.firebasestorage.app",
-  messagingSenderId: "759235788489",
-  appId: "1:759235788489:web:9515bc438a7c7d68469718",
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-const tournamentFilter = document.getElementById("tournamentFilter");
-const leaderboardBody = document.getElementById("leaderboard-body");
-const table = document.getElementById("leaderboard-table");
-const loading = document.getElementById("loading");
+let selectedTournament = "VM2026";
 
-// Auth check
-auth.onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "gaet_login.html";
-    return;
-  }
-});
-
-// Når turnering vælges
-tournamentFilter.addEventListener("change", () => {
-  const tournament = tournamentFilter.value;
-  if (!tournament) return;
-
-  loadLeaderboard(tournament);
-});
-
-async function loadLeaderboard(tournament) {
-  leaderboardBody.innerHTML = "";
-  loading.classList.remove("hidden");
-  table.classList.add("hidden");
-
-  try {
-    // Hent alle brugere fra leaderboard for valgt turnering
-    const usersSnap = await db.collection("leaderboards")
-                              .doc(tournament)
-                              .collection("users")
-                              .get();
-
-    const leaderboard = usersSnap.docs.map(doc => ({
-      username: doc.data().username ?? "Uden navn",
-      points: doc.data().points ?? 0,
-      correctResult: doc.data().correctResult ?? 0,
-      correctOutcome: doc.data().correctOutcome ?? 0
-    }));
-
-    // Sorter efter point
-    leaderboard.sort((a, b) => b.points - a.points);
-
-    leaderboard.forEach((u, index) => {
-      const tr = document.createElement("tr");
-      tr.className = "border-b";
-      tr.innerHTML = `
-        <td class="p-3 font-semibold">${index + 1}</td>
-        <td class="p-3">${u.username}</td>
-        <td class="p-3 font-bold">${u.points}</td>
-        <td class="p-3">${u.correctResult}</td>
-        <td class="p-3">${u.correctOutcome}</td>
-      `;
-      leaderboardBody.appendChild(tr);
+// Turnering valg
+document.querySelectorAll('.tournament-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    selectedTournament = btn.dataset.tournament;
+    document.querySelectorAll('.tournament-btn').forEach(b => {
+      b.classList.remove('bg-blue-600','text-white');
+      b.classList.add('bg-gray-300','text-gray-800');
     });
+    btn.classList.add('bg-blue-600','text-white');
+    await loadLeaderboard();
+  });
+});
 
-    loading.classList.add("hidden");
-    table.classList.remove("hidden");
+// ===== Load leaderboard =====
+async function loadLeaderboard() {
+  const tbody = document.getElementById("leaderboard-body");
+  tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4">Indlæser...</td></tr>`;
 
-  } catch (err) {
-    console.error("Fejl ved indlæsning af leaderboard:", err);
-    loading.textContent = "Fejl ved indlæsning af leaderboard.";
+  // Hent alle brugere
+  const usersSnap = await db.collection("users").get();
+  const users = {};
+  usersSnap.forEach(doc => {
+    const data = doc.data();
+    users[doc.id] = {
+      username: data.username || "Ukendt",
+      uid: doc.id
+    };
+  });
+
+  // Hent leaderboard for valgt turnering
+  const lbSnap = await db.collection("leaderboards")
+                         .doc(selectedTournament)
+                         .collection("users").get();
+
+  const lbData = {};
+  lbSnap.forEach(doc => {
+    lbData[doc.id] = doc.data();
+  });
+
+  // Lav array til sortering
+  const rows = [];
+  for (const uid in users) {
+    const userData = lbData[uid] || { points: 0, correctResult: 0, correctOutcome: 0 };
+    rows.push({
+      username: users[uid].username,
+      points: userData.points || 0,
+      correctResult: userData.correctResult || 0,
+      correctOutcome: userData.correctOutcome || 0
+    });
   }
+
+  // Sorter efter point (højeste først)
+  rows.sort((a,b) => b.points - a.points);
+
+  tbody.innerHTML = rows.map(r => `
+    <tr class="border-t border-gray-200">
+      <td class="px-4 py-2 border">${r.username}</td>
+      <td class="px-4 py-2 border">${r.points}</td>
+      <td class="px-4 py-2 border">${r.correctResult}</td>
+      <td class="px-4 py-2 border">${r.correctOutcome}</td>
+    </tr>
+  `).join('');
 }
+
+// Initial load
+loadLeaderboard();
 </script>
 
 <style>
@@ -146,7 +140,9 @@ async function loadLeaderboard(tournament) {
   font-weight: bold;
   text-decoration: none;
 }
-.menu-bar a:hover, .menu-bar a.active { text-decoration: underline; }
+.menu-bar a:hover, .menu-bar a.active {
+  text-decoration: underline;
+}
 </style>
 
 </body>
