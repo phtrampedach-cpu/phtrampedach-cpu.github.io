@@ -139,8 +139,6 @@ async function loadKampe() {
   guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
   kampeContainer.innerHTML = "";
 
-  let totalPoints = 0;
-
   matchesSnap.forEach(doc => {
     const match = {id: doc.id, ...doc.data()};
     const userGuess = guesses[match.id] || {};
@@ -151,15 +149,6 @@ async function loadKampe() {
     const now = new Date();
     const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
 
-    // Beregn point
-    let points=0;
-    if(match.homeGoals!=null && match.awayGoals!=null && userGuess.homeGoals!=null && userGuess.awayGoals!=null){
-      const correctOutcome = match.homeGoals===match.awayGoals?"draw":match.homeGoals>match.awayGoals?"home":"away";
-      const userOutcome = userGuess.homeGoals===userGuess.awayGoals?"draw":userGuess.homeGoals>userGuess.awayGoals?"home":"away";
-      if(correctOutcome===userOutcome) points+=1;
-      if(match.homeGoals===userGuess.homeGoals && match.awayGoals===userGuess.awayGoals) points+=2;
-      totalPoints+=points;
-    }
 
     let homeColor="", awayColor="";
     if(match.homeGoals!=null && match.awayGoals!=null && userGuess.homeGoals!=null && userGuess.awayGoals!=null){
@@ -222,12 +211,6 @@ batch.push(
     .doc(matchId)
     .set(guessData)
 );
-
-batch.push(
-  updateLeaderboardForUser(matchId, guessData)
-);
-
-
     }
   });
 
@@ -344,129 +327,6 @@ async function importMatches(){
 }
 </style>
 
-<script>
-function calculatePoints(guess, match) {
-  const exact =
-    guess.homeGoals === match.homeGoals &&
-    guess.awayGoals === match.awayGoals;
-
-  const outcome =
-    (match.homeGoals > match.awayGoals && guess.homeGoals > guess.awayGoals) ||
-    (match.homeGoals < match.awayGoals && guess.homeGoals < guess.awayGoals) ||
-    (match.homeGoals === match.awayGoals && guess.homeGoals === guess.awayGoals);
-
-  if (exact) {
-    return { points: 3, exact: 1, outcome: 0 };
-  }
-
-  if (outcome) {
-    return { points: 1, exact: 0, outcome: 1 };
-  }
-
-  return { points: 0, exact: 0, outcome: 0 };
-}
-</script>
-
-<script>
-async function updateLeaderboardForMatch(matchId) {
-  const matchSnap = await db.collection("matches").doc(matchId).get();
-  if (!matchSnap.exists) return;
-
-  const match = matchSnap.data();
-  const tournament = match.tournament;
-
-  if (match.homeGoals === null || match.awayGoals === null) return;
-
-  const guessesSnap = await db.collection("guesses").get();
-
-  for (const userDoc of guessesSnap.docs) {
-    const userId = userDoc.id;
-    const guess = userDoc.data()[matchId];
-    if (!guess) continue;
-
-    const result = calculatePoints(guess, match);
-
-    if (result.points === 0) continue;
-
-    const userRef = db.collection("users").doc(userId);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) continue;
-
-    const username = userSnap.data().username;
-
-    const lbRef = db
-      .collection("leaderboards")
-      .doc(tournament)
-      .collection("users")
-      .doc(userId);
-
-    await lbRef.set(
-      {
-        username,
-        points: firebase.firestore.FieldValue.increment(result.points),
-        correctResult: firebase.firestore.FieldValue.increment(result.exact),
-        correctOutcome: firebase.firestore.FieldValue.increment(result.outcome),
-      },
-      { merge: true }
-    );
-  }
-}
-
-
-async function updateLeaderboardForUser(matchId, guess) {
-  const matchSnap = await db.collection("matches").doc(matchId).get();
-  if (!matchSnap.exists) return;
-
-  const match = matchSnap.data();
-
-  // Kampen er ikke færdig
-  if (match.homeGoals === null || match.awayGoals === null) return;
-  if (!match.tournament) return;
-
-  const gDiff = guess.homeGoals - guess.awayGoals;
-  const mDiff = match.homeGoals - match.awayGoals;
-
-  let points = 0;
-  let correctResult = 0;
-  let correctOutcome = 0;
-
-  if (
-    guess.homeGoals === match.homeGoals &&
-    guess.awayGoals === match.awayGoals
-  ) {
-    points = 3;
-    correctResult = 1;
-  } else if (
-    (gDiff > 0 && mDiff > 0) ||
-    (gDiff === 0 && mDiff === 0) ||
-    (gDiff < 0 && mDiff < 0)
-  ) {
-    points = 1;
-    correctOutcome = 1;
-  }
-
-  if (points === 0) return;
-
-  const userSnap = await db.collection("users").doc(auth.currentUser.uid).get();
-  if (!userSnap.exists) return;
-
-  const username = userSnap.data().username ?? "Ukendt";
-
-  await db
-    .collection("leaderboards")
-    .doc(match.tournament)
-    .collection("users")
-    .doc(auth.currentUser.uid)
-    .set({
-      username,
-      points: firebase.firestore.FieldValue.increment(points),
-      correctResult: firebase.firestore.FieldValue.increment(correctResult),
-      correctOutcome: firebase.firestore.FieldValue.increment(correctOutcome),
-      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-}
-
-</script></0>
 
 
 </body>
