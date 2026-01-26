@@ -208,15 +208,26 @@ document.getElementById("save-all").addEventListener("click", async ()=>{
     const homeInput=kampDiv.querySelector('.homeGoals');
     const awayInput=kampDiv.querySelector('.awayGoals');
     if(!homeInput.disabled && !awayInput.disabled){
-      batch.push(
-        db.collection("users").doc(currentUser.uid)
-          .collection("guesses").doc(matchId)
-          .set({
-            homeGoals:Number(homeInput.value),
-            awayGoals:Number(awayInput.value),
-            savedAt:new Date()
-          })
-      );
+      
+      const guessData = {
+  homeGoals: Number(homeInput.value),
+  awayGoals: Number(awayInput.value),
+  savedAt: new Date()
+};
+
+batch.push(
+  db.collection("users")
+    .doc(currentUser.uid)
+    .collection("guesses")
+    .doc(matchId)
+    .set(guessData)
+);
+
+batch.push(
+  updateLeaderboardForUser(matchId, guessData)
+);
+
+
     }
   });
 
@@ -454,7 +465,6 @@ async function updateLeaderboardForUser(matchId, guess) {
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 }
-await updateLeaderboardForUser(matchId, guessData);
 
 </script></0>
 
