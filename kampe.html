@@ -150,12 +150,6 @@ async function loadKampe() {
     const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
 
 
-    let homeColor="", awayColor="";
-    if(match.homeGoals!=null && match.awayGoals!=null && userGuess.homeGoals!=null && userGuess.awayGoals!=null){
-      if(points===3){homeColor=awayColor="bg-green-500"}
-      else if(points===1){homeColor=awayColor="bg-green-300"}
-      else{homeColor=awayColor="bg-red-500"}
-    }
 
     const kampDiv=document.createElement("div");
     kampDiv.className="p-3 rounded-lg border border-gray-300 shadow-md kamp";
@@ -196,13 +190,12 @@ document.getElementById("save-all").addEventListener("click", async ()=>{
     const matchId=kampDiv.dataset.matchId;
     const homeInput=kampDiv.querySelector('.homeGoals');
     const awayInput=kampDiv.querySelector('.awayGoals');
-    if(!homeInput.disabled && !awayInput.disabled){
-      
+    if (!homeInput.disabled && !awayInput.disabled) {
       const guessData = {
-  homeGoals: Number(homeInput.value),
-  awayGoals: Number(awayInput.value),
-  savedAt: new Date()
-};
+        homeGoals: Number(homeInput.value),
+        awayGoals: Number(awayInput.value),
+        savedAt: new Date()
+      };
 
 batch.push(
   db.collection("users")
@@ -214,12 +207,14 @@ batch.push(
     }
   });
 
+  // Vent på at alle gæt er gemt
   await Promise.all(batch);
 
-  const notice=document.getElementById("save-notice");
-  notice.textContent="Alle gæt er gemt!";
+  // Vis notifikation til brugeren
+  const notice = document.getElementById("save-notice");
+  notice.textContent = "Alle gæt er gemt!";
   notice.classList.remove("hidden");
-  setTimeout(()=>notice.classList.add("hidden"),2000);
+  setTimeout(() => notice.classList.add("hidden"), 2000);
 });
 
 // ===== Import kampene (opdelt) =====
