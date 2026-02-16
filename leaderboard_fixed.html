@@ -118,8 +118,19 @@ async function loadLeaderboard() {
     // Sorter efter point (højeste først)
     rows.sort((a,b) => b.points - a.points);
 
-    if (rows.length === 0 || rows.every(r => r.points === 0)) {
-      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Ingen resultater endnu for ${selectedTournament}</td></tr>`;
+    // Tjek om der er nogen med point
+    const hasAnyPoints = rows.some(r => r.points > 0);
+
+    if (!hasAnyPoints) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-8">
+            <div class="text-gray-500">
+              <p class="text-lg font-semibold mb-2">Ingen resultater endnu for ${selectedTournament}</p>
+              <p class="text-sm">Point vises når admin har indtastet kampresultater</p>
+            </div>
+          </td>
+        </tr>`;
       return;
     }
 
@@ -135,7 +146,30 @@ async function loadLeaderboard() {
     
   } catch (error) {
     console.error("Error loading leaderboard:", error);
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Fejl ved indlæsning: ${error.message}</td></tr>`;
+    
+    // Bedre fejlbesked afhængig af fejltypen
+    if (error.code === 'permission-denied') {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-8">
+            <div class="text-orange-600">
+              <p class="text-lg font-semibold mb-2">⚠️ Adgangsproblem</p>
+              <p class="text-sm mb-2">Leaderboard-data er ikke oprettet endnu.</p>
+              <p class="text-sm">Admin skal indtaste mindst ét kampresultat først.</p>
+            </div>
+          </td>
+        </tr>`;
+    } else {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-8">
+            <div class="text-red-500">
+              <p class="text-lg font-semibold mb-2">Fejl ved indlæsning</p>
+              <p class="text-sm">${error.message}</p>
+            </div>
+          </td>
+        </tr>`;
+    }
   }
 }
 
