@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gæt på kampe - TrampesTips</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+
+<header>
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="leaderboard.html">Leaderboard</a>
+    <a href="2Contact.html">Kontakt</a>
+  </nav>
+</header>
+
+<main>
+  <div class="content-box fade-in">
+    <h1>⚽ Gæt på kampene</h1>
+
+    <p id="user-info" class="text-center" style="color: var(--text-gray); margin-bottom: 2rem; font-size: 1.05rem;"></p>
+
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;" id="tournament-selector">
+      <button data-tournament="VM2026" class="tournament-btn bg-blue-600">VM 2026</button>
+      <button data-tournament="Superliga" class="tournament-btn bg-gray-300">Superliga Forår 2026</button>
+      <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300">Premier League Forår 2026</button>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;" id="controls-container">
+      <button id="save-all" class="btn btn-primary">💾 Gem alle gæt</button>
+      <button id="import-btn" onclick="importMatches()" style="display:none;" class="btn btn-success">📥 Importer alle kampe</button>
+    </div>
+
+    <div id="save-notice" class="hidden notification success" style="margin-bottom: 1rem;"></div>
+
+    <div id="total-points" style="font-size: 1.2rem; font-weight: 600; text-align: center; margin-bottom: 2rem; color: var(--primary-blue);"></div>
+
+    <div id="kampe-container" style="margin-top: 1rem;"></div>
+  </div>
+</main>
+
+<footer>
+  <p>© <span id="aar"></span> TrampesTips</p>
+</footer>
+
+<script>
+document.getElementById('aar').textContent = new Date().getFullYear();
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
+const kampeContainer = document.getElementById("kampe-container");
+const totalPointsEl = document.getElementById("total-points");
+let currentUser = null;
+let selectedTournament = "VM2026";
+
+const flags = {
+  "Danmark":"Billeder/danmark.png",
+  "Tyskland":"Billeder/tyskland.png",
+  "England":"Billeder/england.png",
+  "Frankrig":"Billeder/frankrig.png",
+  "Japan":"Billeder/japan.png",
+  "Kroatien":"Billeder/kroatien.png",
+  "Norge":"Billeder/norge.png",
+  "Portugal":"Billeder/portugal.png",
+  "FCK":"Billeder/fck.png",
+  "FC Midtjylland":"Billeder/fcm.png",
+  "Manchester United":"Billeder/manu.png",
+  "Chelsea":"Billeder/chelsea.png",
+};
+
+// ===== POINT CALCULATION FUNCTION =====
+function calculatePoints(guessHome, guessAway, resultHome, resultAway) {
+  // Convert to numbers
+  const gh = parseInt(guessHome);
+  const ga = parseInt(guessAway);
+  const rh = parseInt(resultHome);
+  const ra = parseInt(resultAway);
+
+  // If any value is invalid, return 0
+  if (isNaN(gh) || isNaN(ga) || isNaN(rh) || isNaN(ra)) return 0;
+
+  // Check for exact score
+  if (gh === rh && ga === ra) return 3;
+
+  // Check for correct outcome
+  const guessOutcome = gh > ga ? 'home' : (gh < ga ? 'away' : 'draw');
+  const resultOutcome = rh > ra ? 'home' : (rh < ra ? 'away' : 'draw');
+
+  if (guessOutcome === resultOutcome) return 1;
+
+  return 0;
+}
+
+// ===== Check login =====
+auth.onAuthStateChanged(async (user) => {
+  if (!user) { window.location.href = "gaet_login.html"; return; }
+  currentUser = user;
+
+  const userRef = db.collection("users").doc(user.uid);
+  const userSnap = await userRef.get();
+
+  if (!userSnap.exists || !userSnap.data().username) {
+    window.location.href = "choose_username.html";
+    return;
+  }
+
+  const username = userSnap.data().username;
+  document.getElementById("user-info").textContent = `Logget ind som: ${username}`;
+
+  // Kun admin kan se import-knappen
+  if (currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+    document.getElementById("import-btn").style.display = "inline-block";
+  }
+
+  await loadKampe();
+});
+
+// ===== Turnering valg =====
+document.querySelectorAll('.tournament-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    selectedTournament = btn.dataset.tournament;
+
+    document.querySelectorAll('.tournament-btn').forEach(b => {
+      if(b===btn){
+        b.classList.remove('bg-gray-300','text-gray-800');
+        b.classList.add('bg-blue-600','text-white');
+      } else {
+        b.classList.remove('bg-blue-600','text-white');
+        b.classList.add('bg-gray-300','text-gray-800');
+      }
+    });
+
+    await loadKampe();
+  });
+});
+
+// ===== Load kampe =====
+async function loadKampe() {
+  kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
+  
+  const matchesSnap = await db.collection("matches")
+                              .where("tournament","==",selectedTournament)
+                              .orderBy("date").get();
+  
+  const guessesSnap = await db.collection("users")
+                              .doc(currentUser.uid)
+                              .collection("guesses").get();
+
+  const guesses = {};
+  guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
+  
+  kampeContainer.innerHTML = "";
+  let totalPoints = 0;
+
+  matchesSnap.forEach(doc => {
+    const match = {id: doc.id, ...doc.data()};
+    const userGuess = guesses[match.id] || {};
+
+    const [year,month,day] = match.date.split("-").map(Number);
+    const [hour,minute] = match.time.split(":").map(Number);
+    const matchDateTime = new Date(year,month-1,day,hour,minute);
+    const now = new Date();
+    const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
+
+    // Calculate points if match has result and user has guess
+    let points = 0;
+    let homeColor = "";
+    let awayColor = "";
+    
+    if (match.homeGoals != null && match.awayGoals != null && 
+        userGuess.homeGoals != null && userGuess.awayGoals != null) {
+      points = calculatePoints(userGuess.homeGoals, userGuess.awayGoals, 
+                               match.homeGoals, match.awayGoals);
+      totalPoints += points;
+      
+      // Color coding for results
+      if (points === 3) {
+        homeColor = "bg-green-200";
+        awayColor = "bg-green-200";
+      } else if (points === 1) {
+        homeColor = "bg-yellow-200";
+        awayColor = "bg-yellow-200";
+      } else if (points === 0) {
+        homeColor = "bg-red-200";
+        awayColor = "bg-red-200";
+      }
+    }
+
+    const kampDiv=document.createElement("div");
+    kampDiv.className="kamp fade-in";
+    kampDiv.dataset.matchId=match.id;
+    kampDiv.innerHTML=`
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 250px;">
+          <img src="${flags[match.homeTeam]}" style="width: 32px; height: 32px; object-fit: contain;">
+          <span style="font-weight: 600; color: var(--text-dark);">${match.homeTeam}</span>
+          <input type="number" min="0" class="homeGoals ${homeColor}" value="${userGuess.homeGoals??''}" ${isLocked?'disabled':''} style="width: 60px; text-align: center; padding: 0.5rem; border-radius: 6px;">
+
+          <span style="font-weight: 700; font-size: 1.2rem; color: var(--text-gray);">vs</span>
+
+          <input type="number" min="0" class="awayGoals ${awayColor}" value="${userGuess.awayGoals??''}" ${isLocked?'disabled':''} style="width: 60px; text-align: center; padding: 0.5rem; border-radius: 6px;">
+          <span style="font-weight: 600; color: var(--text-dark);">${match.awayTeam}</span>
+          <img src="${flags[match.awayTeam]}" style="width: 32px; height: 32px; object-fit: contain;">
+        </div>
+
+        <div style="text-align: right; color: var(--text-light); font-size: 0.9rem;">
+          ${match.date} ${match.time}
+        </div>
+      </div>
+
+      <div style="margin-top: 1rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;">
+        <span style="color: var(--text-gray);">${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}</span>
+        <span style="font-weight: 700; color: var(--primary-blue);">${points > 0 ? `${points} point 🎯` : ''}</span>
+      </div>
+
+      ${isLocked?'<div style="color: var(--error-red); font-size: 0.85rem; margin-top: 0.5rem; font-weight: 600;">🔒 Låst (kan ikke ændres)</div>':''}
+    `;
+
+    kampeContainer.appendChild(kampDiv);
+  });
+
+  totalPointsEl.textContent=`Samlet antal point (${selectedTournament}): ${totalPoints}`;
+}
+
+// ===== Gem alle gæt =====
+document.getElementById("save-all").addEventListener("click", async ()=>{
+  const kampDivs=document.querySelectorAll('.kamp');
+  const batch = db.batch();
+  
+  kampDivs.forEach(kampDiv=>{
+    const matchId=kampDiv.dataset.matchId;
+    const homeInput=kampDiv.querySelector('.homeGoals');
+    const awayInput=kampDiv.querySelector('.awayGoals');
+    
+    if (!homeInput.disabled && !awayInput.disabled) {
+      const homeVal = homeInput.value;
+      const awayVal = awayInput.value;
+      
+      // Only save if both fields have values
+      if (homeVal !== '' && awayVal !== '') {
+        const guessData = {
+          homeGoals: Number(homeVal),
+          awayGoals: Number(awayVal),
+          tournament: selectedTournament,
+          savedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        const guessRef = db.collection("users")
+          .doc(currentUser.uid)
+          .collection("guesses")
+          .doc(matchId);
+        
+        batch.set(guessRef, guessData, { merge: true });
+      }
+    }
+  });
+
+  // Commit all changes
+  await batch.commit();
+
+  // Vis notifikation til brugeren
+  const notice = document.getElementById("save-notice");
+  notice.textContent = "Alle gæt er gemt!";
+  notice.classList.remove("hidden");
+  setTimeout(() => notice.classList.add("hidden"), 2000);
+  
+  // Reload to show updated points
+  await loadKampe();
+});
+
+// ===== Import kampene (opdelt) =====
+async function importMatches(){
+  const vmMatches=[
+    {id:"VM1", tournament:"VM2026", 
+    homeTeam:"Danmark", awayTeam:"Tyskland", 
+    date:"2025-12-16", time:"18:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM2", tournament:"VM2026", 
+    homeTeam:"Frankrig", awayTeam:"Norge", 
+    date:"2025-12-16", time:"19:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM3", tournament:"VM2026", 
+    homeTeam:"Kroatien", awayTeam:"Japan", 
+    date:"2025-12-16", time:"20:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM4", tournament:"VM2026", 
+    homeTeam:"Frankrig", awayTeam:"Japan", 
+    date:"2025-12-18", time:"20:30", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM5", tournament:"VM2026", 
+    homeTeam:"England", awayTeam:"Portugal", 
+    date:"2025-12-18", time:"21:00", 
+    homeGoals:null, awayGoals:null},
+  ];
+
+  const superligaMatches=[
+    {id:"SL1", tournament:"Superliga", 
+    homeTeam:"FC Midtjylland", awayTeam:"FCK", 
+    date:"2026-02-08", time:"16:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL2", tournament:"Superliga", 
+    homeTeam:"FCK", awayTeam:"FC Nordsjælland", 
+    date:"2026-02-14", time:"17:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL3", tournament:"Superliga", 
+    homeTeam:"OB", awayTeam:"FCK", 
+    date:"2026-02-21", time:"14:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL4", tournament:"Superliga", 
+    homeTeam:"FCK", awayTeam:"Randers FC", 
+    date:"2026-03-01", time:"17:00", 
+    homeGoals:null, awayGoals:null}
+  ];
+
+  const premierLeagueMatches=[
+    {id:"PL1", tournament:"PremierLeague", 
+    homeTeam:"Arsenal", awayTeam:"Manchester United", 
+    date:"2026-01-25", time:"17:30", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"PL2", tournament:"PremierLeague", 
+    homeTeam:"Manchester United", awayTeam:"Fulham", 
+    date:"2026-02-01", time:"15:00", 
+    homeGoals:null, awayGoals:null}
+  ];
+
+  const allMatches=[...vmMatches,...superligaMatches,...premierLeagueMatches];
+
+  const batch = db.batch();
+  allMatches.forEach(match => {
+    const matchRef = db.collection("matches").doc(match.id);
+    batch.set(matchRef, match);
+  });
+  
+  await batch.commit();
+  await loadKampe();
+
+  const notice=document.getElementById("save-notice");
+  notice.textContent=`Alle ${allMatches.length} kampe er importeret!`;
+  notice.classList.remove("hidden");
+  setTimeout(()=>notice.classList.add("hidden"),2000);
+}
+</script>
+
+</body>
+</html>

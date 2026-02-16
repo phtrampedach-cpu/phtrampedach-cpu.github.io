@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard - TrampesTips</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="leaderboard.html" class="active">Leaderboard</a>
+    <a href="2Contact.html">Kontakt</a>
+  </nav>
+</header>
+
+<main>
+  <div class="content-box fade-in">
+    <h1>🏆 Leaderboard</h1>
+
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;" id="tournament-selector">
+      <button data-tournament="VM2026" class="tournament-btn bg-blue-600">VM 2026</button>
+      <button data-tournament="Superliga" class="tournament-btn bg-gray-300">Superliga Forår 2026</button>
+      <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300">Premier League Forår 2026</button>
+    </div>
+
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align: center;">🏅 Placering</th>
+            <th>Bruger</th>
+            <th style="text-align: center;">Point</th>
+            <th style="text-align: center;">Korrekt resultat (3p)</th>
+            <th style="text-align: center;">Korrekt udfald (1p)</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+          <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-light);">Indlæser...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>© <span id="aar"></span> TrampesTips</p>
+</footer>
+
+<script>
+document.getElementById('aar').textContent = new Date().getFullYear();
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let selectedTournament = "VM2026";
+
+// ===== POINT CALCULATION FUNCTION =====
+function calculatePoints(guessHome, guessAway, resultHome, resultAway) {
+  const gh = parseInt(guessHome);
+  const ga = parseInt(guessAway);
+  const rh = parseInt(resultHome);
+  const ra = parseInt(resultAway);
+
+  if (isNaN(gh) || isNaN(ga) || isNaN(rh) || isNaN(ra)) return 0;
+
+  // Exact score = 3 points
+  if (gh === rh && ga === ra) return 3;
+
+  // Correct outcome = 1 point
+  const guessOutcome = gh > ga ? 'home' : (gh < ga ? 'away' : 'draw');
+  const resultOutcome = rh > ra ? 'home' : (rh < ra ? 'away' : 'draw');
+
+  if (guessOutcome === resultOutcome) return 1;
+
+  return 0;
+}
+
+// Turnering valg
+document.querySelectorAll('.tournament-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    selectedTournament = btn.dataset.tournament;
+    document.querySelectorAll('.tournament-btn').forEach(b => {
+      b.classList.remove('bg-blue-600','text-white');
+      b.classList.add('bg-gray-300','text-gray-800');
+    });
+    btn.classList.add('bg-blue-600','text-white');
+    await loadLeaderboard();
+  });
+});
+
+// ===== Load leaderboard (beregner point on-the-fly) =====
+async function loadLeaderboard() {
+  const tbody = document.getElementById("leaderboard-body");
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">Indlæser...</td></tr>`;
+
+  try {
+    console.log(`Loading leaderboard for ${selectedTournament}...`);
+
+    // 1. Hent alle kampe for den valgte turnering
+    const matchesSnap = await db.collection("matches")
+                                .where("tournament", "==", selectedTournament)
+                                .get();
+    
+    const matches = {};
+    matchesSnap.forEach(doc => {
+      matches[doc.id] = doc.data();
+    });
+
+    console.log(`Found ${matchesSnap.size} matches for ${selectedTournament}`);
+
+    // 2. Hent alle brugere
+    const usersSnap = await db.collection("users").get();
+    
+    console.log(`Found ${usersSnap.size} users`);
+
+    // 3. For hver bruger, beregn deres point
+    const leaderboardData = [];
+
+    for (const userDoc of usersSnap.docs) {
+      const userId = userDoc.id;
+      const userData = userDoc.data();
+      const username = userData.username || userData.email || "Ukendt";
+
+      // Hent brugerens gæt
+      const guessesSnap = await db.collection("users")
+                                  .doc(userId)
+                                  .collection("guesses")
+                                  .get();
+
+      let totalPoints = 0;
+      let correctResults = 0;
+      let correctOutcomes = 0;
+
+      // Beregn point for hver kamp
+      guessesSnap.forEach(guessDoc => {
+        const matchId = guessDoc.id;
+        const guess = guessDoc.data();
+        const match = matches[matchId];
+
+        // Kun beregn hvis kampen er for denne turnering OG har et resultat
+        if (match && match.homeGoals != null && match.awayGoals != null) {
+          const points = calculatePoints(
+            guess.homeGoals,
+            guess.awayGoals,
+            match.homeGoals,
+            match.awayGoals
+          );
+
+          totalPoints += points;
+
+          if (points === 3) {
+            correctResults++;
+          } else if (points === 1) {
+            correctOutcomes++;
+          }
+        }
+      });
+
+      leaderboardData.push({
+        username,
+        points: totalPoints,
+        correctResults,
+        correctOutcomes
+      });
+    }
+
+    // 4. Sorter efter point
+    leaderboardData.sort((a, b) => b.points - a.points);
+
+    console.log("Leaderboard data:", leaderboardData);
+
+    // 5. Vis resultaterne
+    if (leaderboardData.length === 0 || leaderboardData.every(u => u.points === 0)) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 3rem;">
+            <div style="color: var(--text-light);">
+              <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Ingen resultater endnu for ${selectedTournament}</p>
+              <p style="font-size: 0.9rem;">Point vises når admin har indtastet kampresultater</p>
+            </div>
+          </td>
+        </tr>`;
+      return;
+    }
+
+    tbody.innerHTML = leaderboardData.map((user, index) => {
+      let rowClass = '';
+      let medal = '';
+      
+      if (index === 0 && user.points > 0) {
+        rowClass = 'leaderboard-rank-1';
+        medal = '🥇 ';
+      } else if (index === 1 && user.points > 0) {
+        rowClass = 'leaderboard-rank-2';
+        medal = '🥈 ';
+      } else if (index === 2 && user.points > 0) {
+        rowClass = 'leaderboard-rank-3';
+        medal = '🥉 ';
+      }
+      
+      return `
+      <tr class="${rowClass}">
+        <td style="text-align: center; font-weight: 600;">${medal}${index + 1}</td>
+        <td style="font-weight: 600;">${user.username}</td>
+        <td style="text-align: center; font-weight: 700; color: var(--primary-blue); font-size: 1.1rem;">${user.points}</td>
+        <td style="text-align: center;">${user.correctResults}</td>
+        <td style="text-align: center;">${user.correctOutcomes}</td>
+      </tr>
+    `}).join('');
+    
+  } catch (error) {
+    console.error("Error loading leaderboard:", error);
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" style="text-align: center; padding: 3rem;">
+          <div style="color: var(--error-red);">
+            <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Fejl ved indlæsning</p>
+            <p style="font-size: 0.9rem;">${error.message}</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-light);">Se browser console for detaljer (tryk F12)</p>
+          </div>
+        </td>
+      </tr>`;
+  }
+}
+
+loadLeaderboard();
+</script>
+
+</body>
+</html>

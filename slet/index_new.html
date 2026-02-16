@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TrampesTips - Forside</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <nav class="menu-bar" id="menuBar">
+    <a href="index.html" class="active">Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="leaderboard.html">Leaderboard</a>
+    <a href="2Contact.html">Kontakt</a>
+  </nav>
+</header>
+
+<main>
+  <div class="content-box fade-in">
+    <h1>🎯 Velkommen til TrampesTips</h1>
+    <p class="text-center" style="font-size: 1.1rem; color: var(--text-gray); margin-bottom: 2rem;">
+      Konkurrér med venner og gæt resultater på VM, Superligaen og Premier League!
+    </p>
+
+    <section style="margin-bottom: 2rem;">
+      <h2>⚽ Hvordan kommer jeg i gang?</h2>
+      <p>For at begynde at gætte på kampe skal du blot følge disse simple trin:</p>
+      <ol style="margin-left: 1.5rem; color: var(--text-gray);">
+        <li style="margin-bottom: 0.75rem;"><strong>Log ind</strong> - Gå til Dashboard og log ind med din email</li>
+        <li style="margin-bottom: 0.75rem;"><strong>Vælg turnering</strong> - Vælg om du vil gætte på VM 2026, Superligaen eller Premier League</li>
+        <li style="margin-bottom: 0.75rem;"><strong>Indtast dine gæt</strong> - Gæt resultatet på kampene (du kan gætte indtil 1 time før kickoff)</li>
+        <li style="margin-bottom: 0.75rem;"><strong>Følg med på Leaderboard</strong> - Se hvordan du klarer dig i forhold til dine venner!</li>
+      </ol>
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+      <h2>🏆 Pointsystem</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div style="background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%); padding: 1.5rem; border-radius: 12px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold; color: #22543d; margin-bottom: 0.5rem;">3 point</div>
+          <div style="color: #22543d; font-weight: 600;">Korrekt resultat</div>
+          <div style="color: #2f855a; font-size: 0.9rem; margin-top: 0.5rem;">F.eks. du gætter 2-1 og det bliver 2-1</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.5rem; border-radius: 12px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold; color: #744210; margin-bottom: 0.5rem;">1 point</div>
+          <div style="color: #744210; font-weight: 600;">Korrekt udfald</div>
+          <div style="color: #92400e; font-size: 0.9rem; margin-top: 0.5rem;">F.eks. du gætter 2-1 og det bliver 3-2 (begge hjemmesejr)</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #fed7d7 0%, #fc8181 100%); padding: 1.5rem; border-radius: 12px; text-align: center;">
+          <div style="font-size: 2rem; font-weight: bold; color: #742a2a; margin-bottom: 0.5rem;">0 point</div>
+          <div style="color: #742a2a; font-weight: 600;">Forkert gæt</div>
+          <div style="color: #9b2c2c; font-size: 0.9rem; margin-top: 0.5rem;">F.eks. du gætter hjemmesejr men det bliver udesejr</div>
+        </div>
+      </div>
+    </section>
+
+    <section style="margin-bottom: 2rem;">
+      <h2>📊 Turneringer</h2>
+      <p>Du kan gætte på følgende turneringer:</p>
+      <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+        <div style="flex: 1; min-width: 200px; background: var(--primary-blue); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+          🌍 VM 2026
+        </div>
+        <div style="flex: 1; min-width: 200px; background: var(--primary-blue); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+          🇩🇰 Superliga Forår 2026
+        </div>
+        <div style="flex: 1; min-width: 200px; background: var(--primary-blue); color: white; padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+          🏴󐁧󐁢󐁥󐁮󐁧󐁿 Premier League Forår 2026
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>💬 Kontakt & Support</h2>
+      <p>Hvis du har forslag til forbedringer eller oplever problemer, kan du finde kontaktinformationer under fanen <a href="2Contact.html" style="color: var(--primary-blue); font-weight: 600;">Kontakt</a>.</p>
+    </section>
+
+    <div style="text-align: center; margin-top: 3rem;">
+      <a href="dashboard.html" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem; text-decoration: none;">
+        Kom i gang nu! →
+      </a>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <p>© <span id="aar"></span> TrampesTips | Lavet med ⚽ og ❤️</p>
+</footer>
+
+<script>
+document.getElementById('aar').textContent = new Date().getFullYear();
+</script>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+    authDomain: "trampestips.firebaseapp.com",
+    projectId: "trampestips",
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) return;
+
+    if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
+      const menuBar = document.getElementById("menuBar");
+      const exists = Array.from(menuBar.children).some(a => a.href.includes("admin.html"));
+      if (!exists) {
+        const adminLink = document.createElement("a");
+        adminLink.href = "admin.html";
+        adminLink.textContent = "Admin";
+        menuBar.appendChild(adminLink);
+      }
+    }
+
+    const currentPage = window.location.pathname.split("/").pop() || "index.html";
+    const links = document.querySelectorAll(".menu-bar a");
+    links.forEach(a => {
+      const linkPage = a.href.split("/").pop();
+      if (linkPage === currentPage) a.classList.add("active");
+      else a.classList.remove("active");
+    });
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - Kampstyring</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header>
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="kampe.html">Gæt på kampe</a>
+    <a href="leaderboard.html">Leaderboard</a>
+  </nav>
+</header>
+
+<main>
+  <div class="content-box fade-in">
+    <h1>⚙️ Admin: Kampstyring</h1>
+
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;" id="tournament-selector">
+      <button data-tournament="VM2026" class="tournament-btn bg-blue-600">VM 2026</button>
+      <button data-tournament="Superliga" class="tournament-btn bg-gray-300">Superliga Forår 2026</button>
+      <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300">Premier League Forår 2026</button>
+    </div>
+
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
+      <button id="import-btn" class="btn btn-success">📥 Importer kampe</button>
+      <button id="recalculate-all-btn" class="btn" style="background-color: #9333ea; color: white;">🔄 Genberegn alle leaderboards</button>
+    </div>
+
+    <div id="save-notice" class="hidden notification success" style="margin-bottom: 1rem;"></div>
+
+    <div id="kampe-container" style="margin-top: 1rem;"></div>
+  </div>
+</main>
+
+<footer>
+  <p>© <span id="aar"></span> TrampesTips</p>
+</footer>
+
+<script>
+document.getElementById('aar').textContent = new Date().getFullYear();
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
+const kampeContainer = document.getElementById("kampe-container");
+let currentUser = null;
+let selectedTournament = "VM2026";
+
+const flags = {
+  "Danmark":"Billeder/danmark.png",
+  "Tyskland":"Billeder/tyskland.png",
+  "England":"Billeder/england.png",
+  "Frankrig":"Billeder/frankrig.png",
+  "Japan":"Billeder/japan.png",
+  "Kroatien":"Billeder/kroatien.png",
+  "Norge":"Billeder/norge.png",
+  "Portugal":"Billeder/portugal.png",
+  "FCK":"Billeder/fck.png",
+  "FC Midtjylland":"Billeder/fcm.png",
+  "Manchester United":"Billeder/manu.png",
+  "Chelsea":"Billeder/chelsea.png",
+  "Arsenal":"Billeder/arsenal.png",
+  "Fulham":"Billeder/fulham.png",
+};
+
+// ===== POINT CALCULATION FUNCTION =====
+function calculatePoints(guessHome, guessAway, resultHome, resultAway) {
+  const gh = parseInt(guessHome);
+  const ga = parseInt(guessAway);
+  const rh = parseInt(resultHome);
+  const ra = parseInt(resultAway);
+
+  if (isNaN(gh) || isNaN(ga) || isNaN(rh) || isNaN(ra)) return 0;
+
+  // Exact score = 3 points
+  if (gh === rh && ga === ra) return 3;
+
+  // Correct outcome = 1 point
+  const guessOutcome = gh > ga ? 'home' : (gh < ga ? 'away' : 'draw');
+  const resultOutcome = rh > ra ? 'home' : (rh < ra ? 'away' : 'draw');
+
+  if (guessOutcome === resultOutcome) return 1;
+
+  return 0;
+}
+
+// ===== UPDATE LEADERBOARD FOR SPECIFIC MATCH =====
+async function updateLeaderboardForMatch(matchId) {
+  console.log(`Updating leaderboard for match ${matchId}...`);
+  
+  // Get match details
+  const matchDoc = await db.collection("matches").doc(matchId).get();
+  if (!matchDoc.exists) {
+    console.error("Match not found");
+    return;
+  }
+  
+  const match = matchDoc.data();
+  const tournament = match.tournament;
+  
+  // If match doesn't have results yet, skip
+  if (match.homeGoals == null || match.awayGoals == null) {
+    console.log("Match has no results yet");
+    return;
+  }
+
+  // Get all users
+  const usersSnap = await db.collection("users").get();
+  
+  const batch = db.batch();
+  
+  for (const userDoc of usersSnap.docs) {
+    const userId = userDoc.id;
+    
+    // Get user's guess for this match
+    const guessDoc = await db.collection("users")
+      .doc(userId)
+      .collection("guesses")
+      .doc(matchId)
+      .get();
+    
+    if (!guessDoc.exists) continue; // User didn't guess on this match
+    
+    const guess = guessDoc.data();
+    
+    // Calculate points for this match
+    const points = calculatePoints(
+      guess.homeGoals, 
+      guess.awayGoals, 
+      match.homeGoals, 
+      match.awayGoals
+    );
+    
+    const isExact = points === 3;
+    const isCorrectOutcome = points === 1;
+    
+    // Update user's leaderboard entry
+    const leaderboardRef = db.collection("leaderboards")
+      .doc(tournament)
+      .collection("users")
+      .doc(userId);
+    
+    // We need to increment the counters
+    const leaderboardDoc = await leaderboardRef.get();
+    const currentData = leaderboardDoc.exists ? leaderboardDoc.data() : {
+      points: 0,
+      correctResult: 0,
+      correctOutcome: 0
+    };
+    
+    // Get previous points for this match (if any)
+    const previousPoints = currentData.matchPoints?.[matchId] || 0;
+    const previousExact = currentData.matchExact?.[matchId] || false;
+    const previousOutcome = currentData.matchOutcome?.[matchId] || false;
+    
+    // Calculate the delta
+    const pointsDelta = points - previousPoints;
+    const exactDelta = (isExact ? 1 : 0) - (previousExact ? 1 : 0);
+    const outcomeDelta = (isCorrectOutcome ? 1 : 0) - (previousOutcome ? 1 : 0);
+    
+    batch.set(leaderboardRef, {
+      points: (currentData.points || 0) + pointsDelta,
+      correctResult: (currentData.correctResult || 0) + exactDelta,
+      correctOutcome: (currentData.correctOutcome || 0) + outcomeDelta,
+      matchPoints: {
+        ...(currentData.matchPoints || {}),
+        [matchId]: points
+      },
+      matchExact: {
+        ...(currentData.matchExact || {}),
+        [matchId]: isExact
+      },
+      matchOutcome: {
+        ...(currentData.matchOutcome || {}),
+        [matchId]: isCorrectOutcome
+      },
+      lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge: true });
+  }
+  
+  await batch.commit();
+  console.log("Leaderboard updated successfully");
+}
+
+// ===== RECALCULATE ALL LEADERBOARDS =====
+async function recalculateAllLeaderboards() {
+  if (!confirm("Dette vil genberegne alle leaderboards for alle turneringer. Fortsæt?")) {
+    return;
+  }
+  
+  const notice = document.getElementById("save-notice");
+  notice.textContent = "Genberegner leaderboards...";
+  notice.classList.remove("hidden");
+  
+  try {
+    // Get all matches
+    const matchesSnap = await db.collection("matches").get();
+    const matches = {};
+    matchesSnap.forEach(doc => {
+      matches[doc.id] = { id: doc.id, ...doc.data() };
+    });
+    
+    // Get all users
+    const usersSnap = await db.collection("users").get();
+    
+    // Create a map to store leaderboard data
+    const leaderboards = {}; // tournament -> userId -> data
+    
+    // For each user
+    for (const userDoc of usersSnap.docs) {
+      const userId = userDoc.id;
+      
+      // Get all guesses for this user
+      const guessesSnap = await db.collection("users")
+        .doc(userId)
+        .collection("guesses")
+        .get();
+      
+      guessesSnap.forEach(guessDoc => {
+        const matchId = guessDoc.id;
+        const guess = guessDoc.data();
+        const match = matches[matchId];
+        
+        if (!match) return; // Match doesn't exist
+        if (match.homeGoals == null || match.awayGoals == null) return; // No result yet
+        
+        const tournament = match.tournament;
+        
+        // Initialize tournament if needed
+        if (!leaderboards[tournament]) {
+          leaderboards[tournament] = {};
+        }
+        
+        // Initialize user if needed
+        if (!leaderboards[tournament][userId]) {
+          leaderboards[tournament][userId] = {
+            points: 0,
+            correctResult: 0,
+            correctOutcome: 0,
+            matchPoints: {},
+            matchExact: {},
+            matchOutcome: {}
+          };
+        }
+        
+        // Calculate points
+        const points = calculatePoints(
+          guess.homeGoals,
+          guess.awayGoals,
+          match.homeGoals,
+          match.awayGoals
+        );
+        
+        const isExact = points === 3;
+        const isCorrectOutcome = points === 1;
+        
+        // Add to totals
+        leaderboards[tournament][userId].points += points;
+        if (isExact) leaderboards[tournament][userId].correctResult++;
+        if (isCorrectOutcome) leaderboards[tournament][userId].correctOutcome++;
+        leaderboards[tournament][userId].matchPoints[matchId] = points;
+        leaderboards[tournament][userId].matchExact[matchId] = isExact;
+        leaderboards[tournament][userId].matchOutcome[matchId] = isCorrectOutcome;
+      });
+    }
+    
+    // Now write everything to Firestore
+    const batch = db.batch();
+    let writeCount = 0;
+    
+    for (const tournament in leaderboards) {
+      for (const userId in leaderboards[tournament]) {
+        const leaderboardRef = db.collection("leaderboards")
+          .doc(tournament)
+          .collection("users")
+          .doc(userId);
+        
+        batch.set(leaderboardRef, {
+          ...leaderboards[tournament][userId],
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        writeCount++;
+        
+        // Firestore batch limit is 500
+        if (writeCount >= 450) {
+          await batch.commit();
+          writeCount = 0;
+        }
+      }
+    }
+    
+    if (writeCount > 0) {
+      await batch.commit();
+    }
+    
+    notice.textContent = "Alle leaderboards er genberegnet!";
+    setTimeout(() => notice.classList.add("hidden"), 3000);
+    
+  } catch (error) {
+    console.error("Error recalculating leaderboards:", error);
+    notice.textContent = "Fejl ved genberegning: " + error.message;
+    notice.classList.remove("text-green-700");
+    notice.classList.add("text-red-700");
+  }
+}
+
+// ===== Check login =====
+auth.onAuthStateChanged(async (user) => {
+  if (!user || user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    alert("Kun admin har adgang til denne side");
+    window.location.href = "gaet_login.html";
+    return;
+  }
+  currentUser = user;
+  await loadKampe();
+});
+
+// ===== Turnering valg =====
+document.querySelectorAll('.tournament-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    selectedTournament = btn.dataset.tournament;
+    document.querySelectorAll('.tournament-btn').forEach(b => {
+      b.classList.remove('bg-blue-600','text-white');
+      b.classList.add('bg-gray-300','text-gray-800');
+    });
+    btn.classList.add('bg-blue-600','text-white');
+    await loadKampe();
+  });
+});
+
+// ===== Load kampe =====
+async function loadKampe() {
+  kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
+  const matchesSnap = await db.collection("matches")
+                              .where("tournament","==",selectedTournament)
+                              .orderBy("date").get();
+
+  kampeContainer.innerHTML = "";
+
+  matchesSnap.forEach(doc => {
+    const match = {id: doc.id, ...doc.data()};
+
+    const kampDiv = document.createElement("div");
+    kampDiv.className = "kamp fade-in";
+    kampDiv.dataset.matchId = match.id;
+    kampDiv.innerHTML = `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex: 1; min-width: 250px;">
+          <img src="${flags[match.homeTeam] || 'Billeder/default.png'}" style="width: 32px; height: 32px; object-fit: contain;">
+          <span style="font-weight: 600; color: var(--text-dark);">${match.homeTeam}</span>
+          <input type="number" min="0" class="homeGoals" value="${match.homeGoals ?? ''}" style="width: 60px; text-align: center; padding: 0.5rem; border-radius: 6px;">
+
+          <span style="font-weight: 700; font-size: 1.2rem; color: var(--text-gray);">vs</span>
+
+          <input type="number" min="0" class="awayGoals" value="${match.awayGoals ?? ''}" style="width: 60px; text-align: center; padding: 0.5rem; border-radius: 6px;">
+          <span style="font-weight: 600; color: var(--text-dark);">${match.awayTeam}</span>
+          <img src="${flags[match.awayTeam] || 'Billeder/default.png'}" style="width: 32px; height: 32px; object-fit: contain;">
+        </div>
+
+        <div style="text-align: right; color: var(--text-light); font-size: 0.9rem;">
+          ${match.date} ${match.time}
+        </div>
+      </div>
+
+      <div style="margin-top: 1rem; display: flex; justify-content: flex-end;">
+        <button class="save-match btn btn-primary">💾 Gem resultat</button>
+      </div>
+    `;
+    kampeContainer.appendChild(kampDiv);
+  });
+
+  // Tilføj click event til alle "Gem kamp" knapper
+  document.querySelectorAll(".save-match").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      const kampDiv = e.target.closest(".kamp");
+      const matchId = kampDiv.dataset.matchId;
+      const homeGoals = kampDiv.querySelector(".homeGoals").value;
+      const awayGoals = kampDiv.querySelector(".awayGoals").value;
+
+      // Validate input
+      if (homeGoals === '' || awayGoals === '') {
+        alert("Begge resultater skal udfyldes");
+        return;
+      }
+
+      const homeGoalsNum = Number(homeGoals);
+      const awayGoalsNum = Number(awayGoals);
+
+      const notice = document.getElementById("save-notice");
+      notice.textContent = "Gemmer resultat...";
+      notice.classList.remove("hidden", "error");
+      notice.classList.add("success");
+      notice.style.backgroundColor = "#bee3f8";
+      notice.style.color = "#2c5282";
+
+      try {
+        // Update match result
+        await db.collection("matches").doc(matchId).update({ 
+          homeGoals: homeGoalsNum, 
+          awayGoals: awayGoalsNum 
+        });
+
+        console.log("Match result saved, updating leaderboard...");
+
+        // Update leaderboard for all users who guessed on this match
+        await updateLeaderboardForMatch(matchId);
+
+        notice.textContent = `Kamp gemt og leaderboard opdateret!`;
+        notice.classList.remove("hidden");
+        notice.classList.add("success");
+        notice.style.backgroundColor = "#c6f6d5";
+        notice.style.color = "#22543d";
+        setTimeout(() => notice.classList.add("hidden"), 2000);
+        
+      } catch (error) {
+        console.error("Error saving match:", error);
+        notice.textContent = `Fejl: ${error.message}`;
+        notice.classList.remove("success");
+        notice.classList.add("error");
+        notice.style.backgroundColor = "#fed7d7";
+        notice.style.color = "#742a2a";
+      }
+    });
+  });
+}
+
+// ===== Import kampe =====
+document.getElementById("import-btn").addEventListener("click", async () => {
+  if (!confirm("Dette vil importere alle kampe. Fortsæt?")) return;
+  
+  const vmMatches=[
+    {id:"VM1", tournament:"VM2026", 
+    homeTeam:"Danmark", awayTeam:"Tyskland", 
+    date:"2025-12-16", time:"18:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM2", tournament:"VM2026", 
+    homeTeam:"Frankrig", awayTeam:"Norge", 
+    date:"2025-12-16", time:"19:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM3", tournament:"VM2026", 
+    homeTeam:"Kroatien", awayTeam:"Japan", 
+    date:"2025-12-16", time:"20:00", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM4", tournament:"VM2026", 
+    homeTeam:"Frankrig", awayTeam:"Japan", 
+    date:"2025-12-18", time:"20:30", 
+    homeGoals:null, awayGoals:null},
+    
+    {id:"VM5", tournament:"VM2026", 
+    homeTeam:"England", awayTeam:"Portugal", 
+    date:"2025-12-18", time:"21:00", 
+    homeGoals:null, awayGoals:null},
+  ];
+
+  const superligaMatches=[
+    {id:"SL1", tournament:"Superliga", 
+    homeTeam:"FC Midtjylland", awayTeam:"FCK", 
+    date:"2026-02-08", time:"16:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL2", tournament:"Superliga", 
+    homeTeam:"FCK", awayTeam:"FC Nordsjælland", 
+    date:"2026-02-14", time:"17:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL3", tournament:"Superliga", 
+    homeTeam:"OB", awayTeam:"FCK", 
+    date:"2026-02-21", time:"14:00", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"SL4", tournament:"Superliga", 
+    homeTeam:"FCK", awayTeam:"Randers FC", 
+    date:"2026-03-01", time:"17:00", 
+    homeGoals:null, awayGoals:null}
+  ];
+
+  const premierLeagueMatches=[
+    {id:"PL1", tournament:"PremierLeague", 
+    homeTeam:"Arsenal", awayTeam:"Manchester United", 
+    date:"2026-01-25", time:"17:30", 
+    homeGoals:null, awayGoals:null},
+
+    {id:"PL2", tournament:"PremierLeague", 
+    homeTeam:"Manchester United", awayTeam:"Fulham", 
+    date:"2026-02-01", time:"15:00", 
+    homeGoals:null, awayGoals:null}
+  ];
+
+  const allMatches=[...vmMatches,...superligaMatches,...premierLeagueMatches];
+
+  const batch = db.batch();
+  allMatches.forEach(match => {
+    const matchRef = db.collection("matches").doc(match.id);
+    batch.set(matchRef, match);
+  });
+  
+  await batch.commit();
+  await loadKampe();
+
+  const notice = document.getElementById("save-notice");
+  notice.textContent = `Alle ${allMatches.length} kampe er importeret!`;
+  notice.classList.remove("hidden");
+  setTimeout(() => notice.classList.add("hidden"), 2000);
+});
+
+document.getElementById("recalculate-all-btn").addEventListener("click", recalculateAllLeaderboards);
+</script>
+
+</body>
+</html>
