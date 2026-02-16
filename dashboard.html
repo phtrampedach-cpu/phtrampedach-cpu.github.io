@@ -3,11 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
+  <title>Dashboard - TrampesTips</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -17,85 +15,87 @@
 
 <header>
   <nav class="menu-bar">
-    <a href="index.html" >Forside</a>
-    <a href="dashboard.html"class="active">Dashboard</a>
-    <a href="leaderboard_fixed.html">Leaderboard</a>
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="leaderboard.html">Leaderboard</a>
     <a href="2Contact.html">Kontakt</a>
   </nav>
 </header>
 
 <main>
-  <h1>Velkommen til Dashboard</h1>
-  <p id="user-info"></p>
+  <div class="content-box fade-in">
+    <h1>Dashboard</h1>
+    <p id="user-info" class="text-center" style="font-size: 1.1rem; color: var(--text-gray); margin-bottom: 2rem;"></p>
 
-  <!-- FANEKNAPPER -->
-  <div class="tabs">
-    <button class="tab-btn" onclick="window.location.href='kampe_fixed.html'">Gæt på resultat</button>
-    <button class="tab-btn" id="btn-tilskuertal">Gæt på tilskuertal</button>
-    <button class="tab-btn logout" id="btn-logout">Log ud</button>
+    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem;">
+      <button class="btn btn-primary" onclick="window.location.href='kampe.html'" style="font-size: 1rem; min-width: 200px;">
+        ⚽ Gæt på kampe
+      </button>
+      <button class="btn" id="btn-tilskuertal" style="background-color: var(--text-light); color: white; font-size: 1rem; min-width: 200px;">
+        👥 Gæt på tilskuertal
+      </button>
+      <button class="btn btn-danger" id="btn-logout" style="font-size: 1rem; min-width: 200px;">
+        🚪 Log ud
+      </button>
+    </div>
+
+    <section id="content-area" class="content-box" style="background-color: var(--bg-gray); min-height: 200px;">
+      <p style="text-align: center; color: var(--text-light); padding: 3rem;">Vælg en funktion ovenfor for at komme i gang</p>
+    </section>
   </div>
-
-  <!-- Indholdsområde -->
-  <section id="content-area">
-    <p>Vælg en fane for at begynde.</p>
-  </section>
 </main>
 
+<footer>
+  <p>© <span id="aar"></span> TrampesTips</p>
+</footer>
+
 <script>
-  // ================================
-  // Firebase setup
-  // ================================
-  const firebaseConfig = {
-    apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg", 
-    authDomain: "trampestips.firebaseapp.com",
-    projectId: "trampestips",
-    storageBucket: "trampestips.firebasestorage.app",
-    messagingSenderId: "759235788489",
-    appId: "1:759235788489:web:9515bc438a7c7d68469718",
-    measurementId: "G-B6YTNFRJPS"
-  };
+document.getElementById('aar').textContent = new Date().getFullYear();
 
-  // Initialiser app
-  const app = firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
-  .catch(function (error) {
-    console.error("Persistence-fejl:", error);
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg", 
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+  measurementId: "G-B6YTNFRJPS"
+};
+
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+.catch(function (error) {
+  console.error("Persistence-fejl:", error);
+});
+const analytics = firebase.analytics(app);
+const db = firebase.firestore();
+
+const userInfo = document.getElementById('user-info');
+auth.onAuthStateChanged(user => {
+  if (user) {
+    userInfo.innerHTML = `Velkommen tilbage, <strong>${user.email}</strong>! 👋`;
+  } else {
+    window.location.href = "gaet_login.html";
+  }
+});
+
+const contentArea = document.getElementById('content-area');
+
+document.getElementById('btn-tilskuertal').addEventListener('click', () => {
+  contentArea.innerHTML = `
+    <h2>Gæt på tilskuertal</h2>
+    <p style="color: var(--text-gray);">Denne funktion er under udvikling og kommer snart.</p>
+    <p style="color: var(--text-gray);">Her vil du senere kunne indtaste dine gæt på tilskuertal for kampene.</p>
+  `;
+});
+
+document.getElementById('btn-logout').addEventListener('click', () => {
+  auth.signOut().then(() => {
+    window.location.href = "gaet_login.html";
   });
-  const analytics = firebase.analytics(app);
-  const db = firebase.firestore();
-
-  // ===== Tjek om bruger er logget ind =====
-  const userInfo = document.getElementById('user-info');
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      userInfo.textContent = "Du er logget ind som: " + user.email;
-    } else {
-      window.location.href = "gaet_login.html";
-    }
-  });
-
-  // ===== Faner / knapper =====
-  const contentArea = document.getElementById('content-area');
-
-  document.getElementById('btn-tilskuertal').addEventListener('click', () => {
-    contentArea.innerHTML = `
-      <h2>Gæt på tilskuertal</h2>
-      <p>Under udvikling.</p>
-      <p>Her kan du senere indtaste dine gæt på tilskuertal for kampene.</p>
-    `;
-  });
-
-  // ===== Log ud =====
-  document.getElementById('btn-logout').addEventListener('click', () => {
-    auth.signOut().then(() => {
-      window.location.href = "gaet_login.html";
-    });
-  });
+});
 </script>
-
-
 
 </body>
 </html>
-
