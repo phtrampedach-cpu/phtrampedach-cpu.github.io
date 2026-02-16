@@ -3,14 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Leaderboard</title>
+<title>Leaderboard - TrampesTips</title>
 <link rel="stylesheet" href="styles.css">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-gray-100">
+<body>
 
 <header>
   <nav class="menu-bar">
@@ -21,34 +20,41 @@
   </nav>
 </header>
 
-<main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
-  <h1 class="text-3xl font-bold mb-4 text-center">Leaderboard</h1>
+<main>
+  <div class="content-box fade-in">
+    <h1>🏆 Leaderboard</h1>
 
-  <div class="flex justify-center gap-3 mb-4" id="tournament-selector">
-    <button data-tournament="VM2026" class="tournament-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">VM 2026</button>
-    <button data-tournament="Superliga" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Superliga Forår 2026</button>
-    <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
-  </div>
+    <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;" id="tournament-selector">
+      <button data-tournament="VM2026" class="tournament-btn bg-blue-600">VM 2026</button>
+      <button data-tournament="Superliga" class="tournament-btn bg-gray-300">Superliga Forår 2026</button>
+      <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300">Premier League Forår 2026</button>
+    </div>
 
-  <div id="leaderboard-container" class="overflow-x-auto">
-    <table class="min-w-full text-left border border-gray-300">
-      <thead>
-        <tr class="bg-gray-200">
-          <th class="px-4 py-2 border">Placering</th>
-          <th class="px-4 py-2 border">Bruger</th>
-          <th class="px-4 py-2 border">Point</th>
-          <th class="px-4 py-2 border">Korrekt resultat (3p)</th>
-          <th class="px-4 py-2 border">Korrekt udfald (1p)</th>
-        </tr>
-      </thead>
-      <tbody id="leaderboard-body">
-        <tr><td colspan="5" class="text-center py-4">Indlæser...</td></tr>
-      </tbody>
-    </table>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align: center;">🏅 Placering</th>
+            <th>Bruger</th>
+            <th style="text-align: center;">Point</th>
+            <th style="text-align: center;">Korrekt resultat (3p)</th>
+            <th style="text-align: center;">Korrekt udfald (1p)</th>
+          </tr>
+        </thead>
+        <tbody id="leaderboard-body">
+          <tr><td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-light);">Indlæser...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </main>
 
+<footer>
+  <p>© <span id="aar"></span> TrampesTips</p>
+</footer>
+
 <script>
+document.getElementById('aar').textContent = new Date().getFullYear();
 const firebaseConfig = {
   apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
   authDomain: "trampestips.firebaseapp.com",
@@ -182,62 +188,58 @@ async function loadLeaderboard() {
     if (leaderboardData.length === 0 || leaderboardData.every(u => u.points === 0)) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="5" class="text-center py-8">
-            <div class="text-gray-500">
-              <p class="text-lg font-semibold mb-2">Ingen resultater endnu for ${selectedTournament}</p>
-              <p class="text-sm">Point vises når admin har indtastet kampresultater</p>
+          <td colspan="5" style="text-align: center; padding: 3rem;">
+            <div style="color: var(--text-light);">
+              <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Ingen resultater endnu for ${selectedTournament}</p>
+              <p style="font-size: 0.9rem;">Point vises når admin har indtastet kampresultater</p>
             </div>
           </td>
         </tr>`;
       return;
     }
 
-    tbody.innerHTML = leaderboardData.map((user, index) => `
-      <tr class="border-t border-gray-200 ${index === 0 && user.points > 0 ? 'bg-yellow-100 font-bold' : ''}">
-        <td class="px-4 py-2 border text-center">${index + 1}</td>
-        <td class="px-4 py-2 border">${user.username}</td>
-        <td class="px-4 py-2 border text-center font-semibold">${user.points}</td>
-        <td class="px-4 py-2 border text-center">${user.correctResults}</td>
-        <td class="px-4 py-2 border text-center">${user.correctOutcomes}</td>
+    tbody.innerHTML = leaderboardData.map((user, index) => {
+      let rowClass = '';
+      let medal = '';
+      
+      if (index === 0 && user.points > 0) {
+        rowClass = 'leaderboard-rank-1';
+        medal = '🥇 ';
+      } else if (index === 1 && user.points > 0) {
+        rowClass = 'leaderboard-rank-2';
+        medal = '🥈 ';
+      } else if (index === 2 && user.points > 0) {
+        rowClass = 'leaderboard-rank-3';
+        medal = '🥉 ';
+      }
+      
+      return `
+      <tr class="${rowClass}">
+        <td style="text-align: center; font-weight: 600;">${medal}${index + 1}</td>
+        <td style="font-weight: 600;">${user.username}</td>
+        <td style="text-align: center; font-weight: 700; color: var(--primary-blue); font-size: 1.1rem;">${user.points}</td>
+        <td style="text-align: center;">${user.correctResults}</td>
+        <td style="text-align: center;">${user.correctOutcomes}</td>
       </tr>
-    `).join('');
+    `}).join('');
     
   } catch (error) {
     console.error("Error loading leaderboard:", error);
     tbody.innerHTML = `
       <tr>
-        <td colspan="5" class="text-center py-8">
-          <div class="text-red-500">
-            <p class="text-lg font-semibold mb-2">Fejl ved indlæsning</p>
-            <p class="text-sm">${error.message}</p>
-            <p class="text-xs mt-2">Se browser console for detaljer (tryk F12)</p>
+        <td colspan="5" style="text-align: center; padding: 3rem;">
+          <div style="color: var(--error-red);">
+            <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem;">Fejl ved indlæsning</p>
+            <p style="font-size: 0.9rem;">${error.message}</p>
+            <p style="font-size: 0.8rem; margin-top: 0.5rem; color: var(--text-light);">Se browser console for detaljer (tryk F12)</p>
           </div>
         </td>
       </tr>`;
   }
 }
 
-// Initial load
 loadLeaderboard();
 </script>
-
-<style>
-.menu-bar {
-  display: flex;
-  justify-content: center;
-  background-color: #007bff;
-  padding: 10px;
-  gap: 15px;
-}
-.menu-bar a {
-  color: white;
-  font-weight: bold;
-  text-decoration: none;
-}
-.menu-bar a:hover, .menu-bar a.active {
-  text-decoration: underline;
-}
-</style>
 
 </body>
 </html>
