@@ -110,7 +110,7 @@ auth.onAuthStateChanged(async (user) => {
 
   // Hvis brugeren allerede har et brugernavn
   if (doc.exists && doc.data().username) {
-    window.location.href = "kampe.html";
+    window.location.href = "kampe_fixed.html";
     return;
   }
 
@@ -138,7 +138,7 @@ async function saveUsername() {
     createdAt: new Date()
   }, { merge: true });
 
-  window.location.href = "kampe.html";
+  window.location.href = "kampe_fixed.html";
 }
 </script>
 

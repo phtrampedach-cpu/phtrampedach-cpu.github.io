@@ -12,7 +12,7 @@
   <nav class="menu-bar" id="menuBar">
     <a href="index.html" class="active">Forside</a>
     <a href="dashboard.html">Dashboard</a>
-    <a href="leaderboard.html">Leaderboard</a>
+    <a href="leaderboard_fixed.html">Leaderboard</a>
     <a href="2Contact.html">Kontakt</a>
     <!-- Admin-link indsættes via JS, hvis brugeren er admin -->
   </nav>
@@ -65,10 +65,10 @@ document.getElementById('aar').textContent = new Date().getFullYear();
     // Tilføj admin-link hvis bruger er admin
     if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
       const menuBar = document.getElementById("menuBar");
-      const exists = Array.from(menuBar.children).some(a => a.href.includes("admin.html"));
+      const exists = Array.from(menuBar.children).some(a => a.href.includes("admin_fixed.html"));
       if (!exists) {
         const adminLink = document.createElement("a");
-        adminLink.href = "admin.html";
+        adminLink.href = "admin_fixed.html";
         adminLink.textContent = "Admin";
         menuBar.appendChild(adminLink);
       }

@@ -82,6 +82,29 @@ const flags = {
   "Chelsea":"Billeder/chelsea.png",
 };
 
+// ===== POINT CALCULATION FUNCTION =====
+function calculatePoints(guessHome, guessAway, resultHome, resultAway) {
+  // Convert to numbers
+  const gh = parseInt(guessHome);
+  const ga = parseInt(guessAway);
+  const rh = parseInt(resultHome);
+  const ra = parseInt(resultAway);
+
+  // If any value is invalid, return 0
+  if (isNaN(gh) || isNaN(ga) || isNaN(rh) || isNaN(ra)) return 0;
+
+  // Check for exact score
+  if (gh === rh && ga === ra) return 3;
+
+  // Check for correct outcome
+  const guessOutcome = gh > ga ? 'home' : (gh < ga ? 'away' : 'draw');
+  const resultOutcome = rh > ra ? 'home' : (rh < ra ? 'away' : 'draw');
+
+  if (guessOutcome === resultOutcome) return 1;
+
+  return 0;
+}
+
 // ===== Check login =====
 auth.onAuthStateChanged(async (user) => {
   if (!user) { window.location.href = "gaet_login.html"; return; }
@@ -99,7 +122,7 @@ auth.onAuthStateChanged(async (user) => {
   document.getElementById("user-info").textContent = `Logget ind som: ${username}`;
 
   // Kun admin kan se import-knappen
-  if (currentUser.email === ADMIN_EMAIL) {
+  if (currentUser.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
     document.getElementById("import-btn").style.display = "inline-block";
   }
 
@@ -128,16 +151,20 @@ document.querySelectorAll('.tournament-btn').forEach(btn => {
 // ===== Load kampe =====
 async function loadKampe() {
   kampeContainer.innerHTML = `<p class="text-center text-gray-500">Indlæser kampe...</p>`;
+  
   const matchesSnap = await db.collection("matches")
                               .where("tournament","==",selectedTournament)
                               .orderBy("date").get();
+  
   const guessesSnap = await db.collection("users")
                               .doc(currentUser.uid)
                               .collection("guesses").get();
 
   const guesses = {};
   guessesSnap.forEach(doc => guesses[doc.id] = doc.data());
+  
   kampeContainer.innerHTML = "";
+  let totalPoints = 0;
 
   matchesSnap.forEach(doc => {
     const match = {id: doc.id, ...doc.data()};
@@ -149,9 +176,29 @@ async function loadKampe() {
     const now = new Date();
     const isLocked = now > new Date(matchDateTime.getTime() - 60*60*1000);
 
+    // Calculate points if match has result and user has guess
+    let points = 0;
     let homeColor = "";
     let awayColor = "";
-
+    
+    if (match.homeGoals != null && match.awayGoals != null && 
+        userGuess.homeGoals != null && userGuess.awayGoals != null) {
+      points = calculatePoints(userGuess.homeGoals, userGuess.awayGoals, 
+                               match.homeGoals, match.awayGoals);
+      totalPoints += points;
+      
+      // Color coding for results
+      if (points === 3) {
+        homeColor = "bg-green-200";
+        awayColor = "bg-green-200";
+      } else if (points === 1) {
+        homeColor = "bg-yellow-200";
+        awayColor = "bg-yellow-200";
+      } else if (points === 0) {
+        homeColor = "bg-red-200";
+        awayColor = "bg-red-200";
+      }
+    }
 
     const kampDiv=document.createElement("div");
     kampDiv.className="p-3 rounded-lg border border-gray-300 shadow-md kamp";
@@ -171,11 +218,12 @@ async function loadKampe() {
         <span class="text-sm text-gray-500 ml-4">${match.date} ${match.time}</span>
       </div>
 
-      <div class="mt-2 text-sm text-gray-700">
-        ${match.homeGoals!=null?`Resultat: ${match.homeGoals} - ${match.awayGoals}`:''}
+      <div class="mt-2 text-sm text-gray-700 flex justify-between">
+        <span>${match.homeGoals != null ? `Resultat: ${match.homeGoals} - ${match.awayGoals}` : ''}</span>
+        <span class="font-bold">${points > 0 ? `${points} point` : ''}</span>
       </div>
 
-      ${isLocked?'<div class="text-red-500 text-sm mt-1 font-semibold">Låst</div>':''}
+      ${isLocked?'<div class="text-red-500 text-sm mt-1 font-semibold">Låst (kan ikke ændres)</div>':''}
     `;
 
     kampeContainer.appendChild(kampDiv);
@@ -187,36 +235,47 @@ async function loadKampe() {
 // ===== Gem alle gæt =====
 document.getElementById("save-all").addEventListener("click", async ()=>{
   const kampDivs=document.querySelectorAll('.kamp');
-  const batch=[];
+  const batch = db.batch();
+  
   kampDivs.forEach(kampDiv=>{
     const matchId=kampDiv.dataset.matchId;
     const homeInput=kampDiv.querySelector('.homeGoals');
     const awayInput=kampDiv.querySelector('.awayGoals');
+    
     if (!homeInput.disabled && !awayInput.disabled) {
-      const guessData = {
-        homeGoals: Number(homeInput.value),
-        awayGoals: Number(awayInput.value),
-        savedAt: new Date()
-      };
+      const homeVal = homeInput.value;
+      const awayVal = awayInput.value;
+      
+      // Only save if both fields have values
+      if (homeVal !== '' && awayVal !== '') {
+        const guessData = {
+          homeGoals: Number(homeVal),
+          awayGoals: Number(awayVal),
+          tournament: selectedTournament,
+          savedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
 
-batch.push(
-  db.collection("users")
-    .doc(currentUser.uid)
-    .collection("guesses")
-    .doc(matchId)
-    .set(guessData)
-);
+        const guessRef = db.collection("users")
+          .doc(currentUser.uid)
+          .collection("guesses")
+          .doc(matchId);
+        
+        batch.set(guessRef, guessData, { merge: true });
+      }
     }
   });
 
-  // Vent på at alle gæt er gemt
-  await Promise.all(batch);
+  // Commit all changes
+  await batch.commit();
 
   // Vis notifikation til brugeren
   const notice = document.getElementById("save-notice");
   notice.textContent = "Alle gæt er gemt!";
   notice.classList.remove("hidden");
   setTimeout(() => notice.classList.add("hidden"), 2000);
+  
+  // Reload to show updated points
+  await loadKampe();
 });
 
 // ===== Import kampene (opdelt) =====
@@ -224,31 +283,26 @@ async function importMatches(){
   const vmMatches=[
     {id:"VM1", tournament:"VM2026", 
     homeTeam:"Danmark", awayTeam:"Tyskland", 
-    homeFlag:"danmark.png", awayFlag:"tyskland.png", 
     date:"2025-12-16", time:"18:00", 
     homeGoals:null, awayGoals:null},
     
     {id:"VM2", tournament:"VM2026", 
     homeTeam:"Frankrig", awayTeam:"Norge", 
-    homeFlag:"frankrig.png", awayFlag:"norge.png", 
     date:"2025-12-16", time:"19:00", 
     homeGoals:null, awayGoals:null},
     
     {id:"VM3", tournament:"VM2026", 
     homeTeam:"Kroatien", awayTeam:"Japan", 
-    homeFlag:"kroatien.png", awayFlag:"japan.png", 
     date:"2025-12-16", time:"20:00", 
     homeGoals:null, awayGoals:null},
     
     {id:"VM4", tournament:"VM2026", 
     homeTeam:"Frankrig", awayTeam:"Japan", 
-    homeFlag:"frankrig.png", awayFlag:"japan.png", 
     date:"2025-12-18", time:"20:30", 
     homeGoals:null, awayGoals:null},
     
     {id:"VM5", tournament:"VM2026", 
     homeTeam:"England", awayTeam:"Portugal", 
-    homeFlag:"england.png", awayFlag:"portugal.png", 
     date:"2025-12-18", time:"21:00", 
     homeGoals:null, awayGoals:null},
   ];
@@ -256,25 +310,21 @@ async function importMatches(){
   const superligaMatches=[
     {id:"SL1", tournament:"Superliga", 
     homeTeam:"FC Midtjylland", awayTeam:"FCK", 
-    homeFlag:"fcm.png", awayFlag:"fck.png", 
     date:"2026-02-08", time:"16:00", 
     homeGoals:null, awayGoals:null},
 
     {id:"SL2", tournament:"Superliga", 
-    homeTeam:"FCK", awayTeam:"FCN", 
-    homeFlag:"fck.png", awayFlag:"fcn.png", 
+    homeTeam:"FCK", awayTeam:"FC Nordsjælland", 
     date:"2026-02-14", time:"17:00", 
     homeGoals:null, awayGoals:null},
 
     {id:"SL3", tournament:"Superliga", 
     homeTeam:"OB", awayTeam:"FCK", 
-    homeFlag:"ob.png", awayFlag:"fck.png", 
     date:"2026-02-21", time:"14:00", 
     homeGoals:null, awayGoals:null},
 
     {id:"SL4", tournament:"Superliga", 
     homeTeam:"FCK", awayTeam:"Randers FC", 
-    homeFlag:"fck.png", awayFlag:"rfc.png", 
     date:"2026-03-01", time:"17:00", 
     homeGoals:null, awayGoals:null}
   ];
@@ -282,25 +332,25 @@ async function importMatches(){
   const premierLeagueMatches=[
     {id:"PL1", tournament:"PremierLeague", 
     homeTeam:"Arsenal", awayTeam:"Manchester United", 
-    homeFlag:"arsenal.png", awayFlag:"manu.png", 
     date:"2026-01-25", time:"17:30", 
     homeGoals:null, awayGoals:null},
 
     {id:"PL2", tournament:"PremierLeague", 
     homeTeam:"Manchester United", awayTeam:"Fulham", 
-    homeFlag:"manu.png", awayFlag:"fulham.png", 
     date:"2026-02-01", time:"15:00", 
     homeGoals:null, awayGoals:null}
   ];
 
   const allMatches=[...vmMatches,...superligaMatches,...premierLeagueMatches];
 
-  for(const match of allMatches){
-    await db.collection("matches").doc(match.id).set(match);
-  }
-
-  await loadKampe(); // genindlæs kampene automatisk
-
+  const batch = db.batch();
+  allMatches.forEach(match => {
+    const matchRef = db.collection("matches").doc(match.id);
+    batch.set(matchRef, match);
+  });
+  
+  await batch.commit();
+  await loadKampe();
 
   const notice=document.getElementById("save-notice");
   notice.textContent=`Alle ${allMatches.length} kampe er importeret!`;
@@ -326,8 +376,6 @@ async function importMatches(){
   text-decoration: underline;
 }
 </style>
-
-
 
 </body>
 </html>

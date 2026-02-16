@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaderboard</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100">
+
+<header>
+  <nav class="menu-bar">
+    <a href="index.html">Forside</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="leaderboard_fixed.html" class="active">Leaderboard</a>
+    <a href="2Contact.html">Kontakt</a>
+  </nav>
+</header>
+
+<main class="max-w-4xl mx-auto bg-white mt-8 p-6 rounded-lg shadow">
+  <h1 class="text-3xl font-bold mb-4 text-center">Leaderboard</h1>
+
+  <div class="flex justify-center gap-3 mb-4" id="tournament-selector">
+    <button data-tournament="VM2026" class="tournament-btn bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">VM 2026</button>
+    <button data-tournament="Superliga" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Superliga Forår 2026</button>
+    <button data-tournament="PremierLeague" class="tournament-btn bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400">Premier League Forår 2026</button>
+  </div>
+
+  <div id="leaderboard-container" class="overflow-x-auto">
+    <table class="min-w-full text-left border border-gray-300">
+      <thead>
+        <tr class="bg-gray-200">
+          <th class="px-4 py-2 border">Placering</th>
+          <th class="px-4 py-2 border">Bruger</th>
+          <th class="px-4 py-2 border">Point</th>
+          <th class="px-4 py-2 border">Korrekt resultat (3p)</th>
+          <th class="px-4 py-2 border">Korrekt udfald (1p)</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body">
+        <tr><td colspan="5" class="text-center py-4">Indlæser...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</main>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
+  authDomain: "trampestips.firebaseapp.com",
+  projectId: "trampestips",
+  storageBucket: "trampestips.firebasestorage.app",
+  messagingSenderId: "759235788489",
+  appId: "1:759235788489:web:9515bc438a7c7d68469718",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let selectedTournament = "VM2026";
+
+// Turnering valg
+document.querySelectorAll('.tournament-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    selectedTournament = btn.dataset.tournament;
+    document.querySelectorAll('.tournament-btn').forEach(b => {
+      b.classList.remove('bg-blue-600','text-white');
+      b.classList.add('bg-gray-300','text-gray-800');
+    });
+    btn.classList.add('bg-blue-600','text-white');
+    await loadLeaderboard();
+  });
+});
+
+// ===== Load leaderboard =====
+async function loadLeaderboard() {
+  const tbody = document.getElementById("leaderboard-body");
+  tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4">Indlæser...</td></tr>`;
+
+  try {
+    // Hent alle brugere
+    const usersSnap = await db.collection("users").get();
+    const users = {};
+    usersSnap.forEach(doc => {
+      const data = doc.data();
+      users[doc.id] = {
+        username: data.username || "Ukendt",
+        uid: doc.id
+      };
+    });
+
+    // Hent leaderboard for valgt turnering
+    const lbSnap = await db.collection("leaderboards")
+                           .doc(selectedTournament)
+                           .collection("users").get();
+
+    const lbData = {};
+    lbSnap.forEach(doc => {
+      lbData[doc.id] = doc.data();
+    });
+
+    // Lav array til sortering
+    const rows = [];
+    for (const uid in users) {
+      const userData = lbData[uid] || { points: 0, correctResult: 0, correctOutcome: 0 };
+      rows.push({
+        username: users[uid].username,
+        points: userData.points || 0,
+        correctResult: userData.correctResult || 0,
+        correctOutcome: userData.correctOutcome || 0
+      });
+    }
+
+    // Sorter efter point (højeste først)
+    rows.sort((a,b) => b.points - a.points);
+
+    if (rows.length === 0 || rows.every(r => r.points === 0)) {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Ingen resultater endnu for ${selectedTournament}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = rows.map((r, index) => `
+      <tr class="border-t border-gray-200 ${index === 0 ? 'bg-yellow-100 font-bold' : ''}">
+        <td class="px-4 py-2 border text-center">${index + 1}</td>
+        <td class="px-4 py-2 border">${r.username}</td>
+        <td class="px-4 py-2 border text-center font-semibold">${r.points}</td>
+        <td class="px-4 py-2 border text-center">${r.correctResult}</td>
+        <td class="px-4 py-2 border text-center">${r.correctOutcome}</td>
+      </tr>
+    `).join('');
+    
+  } catch (error) {
+    console.error("Error loading leaderboard:", error);
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Fejl ved indlæsning: ${error.message}</td></tr>`;
+  }
+}
+
+// Initial load
+loadLeaderboard();
+</script>
+
+<style>
+.menu-bar {
+  display: flex;
+  justify-content: center;
+  background-color: #007bff;
+  padding: 10px;
+  gap: 15px;
+}
+.menu-bar a {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+}
+.menu-bar a:hover, .menu-bar a.active {
+  text-decoration: underline;
+}
+</style>
+
+</body>
+</html>
