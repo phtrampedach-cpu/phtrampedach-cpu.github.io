@@ -87,7 +87,6 @@ const flags = {
   "Norge":"Billeder/norge.png",
   "Portugal":"Billeder/portugal.png",
   "FCK":"Billeder/fck.png",
-  "OB":"Billeder/ob.png",
   "FC Midtjylland":"Billeder/fcm.png",
   "Manchester United":"Billeder/manu.png",
   "Chelsea":"Billeder/chelsea.png",
@@ -235,13 +234,13 @@ async function loadKampe() {
     matchesToShow = [...upcomingMatches, ...playedMatches];
   }
 
-  // Vis overskrift hvis vi viser alle kampe
-  if (selectedFilter === 'all' && upcomingMatches.length > 0 && playedMatches.length > 0) {
-    if (upcomingMatches.length > 0) {
-      const headerDiv = document.createElement("div");
-      headerDiv.innerHTML = `<h3 style="font-size: 1.3rem; font-weight: 700; color: var(--primary-blue); margin: 1.5rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-blue);">📅 Kommende kampe</h3>`;
-      kampeContainer.appendChild(headerDiv);
-    }
+  // Vis overskrift KUN hvis vi viser alle kampe OG der er både kommende og afviklede kampe
+  const showHeaders = selectedFilter === 'all' && upcomingMatches.length > 0 && playedMatches.length > 0;
+
+  if (showHeaders) {
+    const headerDiv = document.createElement("div");
+    headerDiv.innerHTML = `<h3 style="font-size: 1.3rem; font-weight: 700; color: var(--primary-blue); margin: 1.5rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--primary-blue);">📅 Kommende kampe</h3>`;
+    kampeContainer.appendChild(headerDiv);
   }
 
   // Render kommende kampe (eller alle hvis filter er 'upcoming')
@@ -252,8 +251,8 @@ async function loadKampe() {
     totalPoints += rendered.points;
   });
 
-  // Vis separator hvis vi viser alle kampe
-  if (selectedFilter === 'all' && upcomingMatches.length > 0 && playedMatches.length > 0) {
+  // Vis separator KUN hvis vi viser alle kampe OG der er både kommende og afviklede kampe
+  if (showHeaders) {
     const headerDiv = document.createElement("div");
     headerDiv.innerHTML = `<h3 style="font-size: 1.3rem; font-weight: 700; color: var(--text-gray); margin: 2rem 0 1rem 0; padding-bottom: 0.5rem; border-bottom: 2px solid var(--border-gray);">✅ Afviklede kampe</h3>`;
     kampeContainer.appendChild(headerDiv);
