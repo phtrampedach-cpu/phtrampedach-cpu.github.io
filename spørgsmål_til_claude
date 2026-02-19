@@ -4,7 +4,6 @@ For at gøre hjemmesiden mere brugervenlig, så kunne jeg godt tænke mig at log
 Det samme skal gøre sig gældende for log ud knappen når man allerede er logget ind.
 
 
-
 Når bruger IKKE er logget ind, så skal man kun kunne se forsiden, dashboard og kontakt fanen.
 
 Når bruger ER logget ind, så skal man kunne se det hele.
