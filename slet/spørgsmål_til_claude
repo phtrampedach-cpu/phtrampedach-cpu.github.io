@@ -1,0 +1,12 @@
+Okay - Jeg tror at jeg venter lidt med det.
+
+For at gøre hjemmesiden mere brugervenlig, så kunne jeg godt tænke mig at log ind knappen var i headeren. 
+Det samme skal gøre sig gældende for log ud knappen når man allerede er logget ind.
+
+
+
+Når bruger IKKE er logget ind, så skal man kun kunne se forsiden, dashboard og kontakt fanen.
+
+Når bruger ER logget ind, så skal man kunne se det hele.
+
+Desuden, så vil jeg også gerne have at på dashboard knappen i headeren har en dropdown menu, hvor man kan trykke direkte ind på at gætte på kampene. Her skal der senere tilføjes endnu en knap i dropdown hvor man kan gætte på tilskuertal
