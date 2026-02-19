@@ -23,7 +23,9 @@
 <main>
   <div class="content-box fade-in">
     <h1>🏆 Leaderboard</h1>
-    
+
+    <p id="user-info" class="text-center" style="color: var(--text-gray); margin-bottom: 2rem; font-size: 1.05rem;"></p>
+
     <div style="display: flex; justify-content: center; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;" id="tournament-selector">
       <button data-tournament="VM2026" class="tournament-btn bg-blue-600" >VM 2026</button>
       <button data-tournament="Superliga" class="tournament-btn bg-gray-300">Superliga Forår 2026</button>
@@ -96,7 +98,7 @@ document.querySelectorAll('.tournament-btn').forEach(btn => {
     selectedTournament = btn.dataset.tournament;
     document.querySelectorAll('.tournament-btn').forEach(b => {
       b.classList.remove('bg-blue-600','text-white');
-      b.classList.add('bg-gray-300','text-gray-800');
+      b.classList.add('bg-gray-300','text-blue-800');
     });
     btn.classList.add('bg-blue-600','text-white');
     await loadLeaderboard();
