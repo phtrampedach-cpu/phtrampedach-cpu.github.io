@@ -2,8 +2,8 @@
 <html lang="da">
 <head>
   <meta charset="UTF-8">
-  <title>Login - TrampesTips</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -11,113 +11,52 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 
-<body style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
 
-<div style="background: white; padding: 2.5rem; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 100%; max-width: 420px;">
+<div class="bg-white p-6 rounded shadow w-full max-w-sm">
 
-  <!-- Logo/Title -->
-  <div style="text-align: center; margin-bottom: 2rem;">
-    <h1 style="font-size: 2rem; color: var(--primary-blue); margin: 0 0 0.5rem 0;">⚽ TrampesTips</h1>
-    <p style="color: var(--text-gray); margin: 0;">Gæt på fodbold og konkurrér med venner!</p>
-  </div>
+  <h1 class="text-2xl font-bold mb-4 text-center">Log ind</h1>
 
-  <!-- LOGIN BOX -->
+  <!-- LOGIN -->
   <div id="loginBox">
-    <h2 style="font-size: 1.3rem; margin: 0 0 1.5rem 0; text-align: center; color: var(--text-dark);">Log ind</h2>
+    <input id="email" type="email" placeholder="Email"
+           class="border rounded p-2 w-full mb-2">
 
-    <div style="margin-bottom: 1rem;">
-      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark); font-size: 0.9rem;">Email</label>
-      <input id="email" type="email" placeholder="din@email.dk"
-             style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-gray); border-radius: 8px; font-size: 1rem;">
-    </div>
+    <input id="password" type="password" placeholder="Adgangskode"
+           class="border rounded p-2 w-full mb-4">
 
-    <div style="margin-bottom: 1.5rem;">
-      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark); font-size: 0.9rem;">Adgangskode</label>
-      <input id="password" type="password" placeholder="••••••••"
-             style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-gray); border-radius: 8px; font-size: 1rem;">
-    </div>
-
-    <div id="error-message" style="display: none; background-color: #fed7d7; color: #742a2a; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem;"></div>
-
-    <button onclick="login()" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-size: 1rem; margin-bottom: 1rem;">
+    <button onclick="login()"
+            class="bg-blue-600 text-white w-full py-2 rounded">
       Log ind
     </button>
 
-    <div style="text-align: center; margin-bottom: 1rem;">
-      <button onclick="resetPassword()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 0.9rem;">
-        Glemt adgangskode?
-      </button>
-    </div>
+  <button onclick="resetPassword()"
+          class="text-sm text-blue-600 underline w-full">
+    Glemt adgangskode?
+  </button>
 
-    <div style="text-align: center; padding-top: 1rem; border-top: 1px solid var(--border-gray);">
-      <p style="color: var(--text-gray); margin: 0 0 0.75rem 0; font-size: 0.9rem;">Har du ikke en konto?</p>
-      <button onclick="showRegister()" style="background-color: var(--success-green); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: all 0.3s ease;">
-        Opret ny bruger
-      </button>
-    </div>
   </div>
 
-  <!-- REGISTER BOX -->
-  <div id="registerBox" style="display: none;">
-    <h2 style="font-size: 1.3rem; margin: 0 0 1.5rem 0; text-align: center; color: var(--text-dark);">Opret ny bruger</h2>
+  <!-- BRUGERNAVN -->
+  <div id="usernameBox" class="hidden">
+    <p class="mb-2 font-semibold">Vælg et brugernavn</p>
 
-    <div style="margin-bottom: 1rem;">
-      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark); font-size: 0.9rem;">Email</label>
-      <input id="register-email" type="email" placeholder="din@email.dk"
-             style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-gray); border-radius: 8px; font-size: 1rem;">
-    </div>
+    <input id="usernameInput" type="text"
+           class="border rounded p-2 w-full mb-3"
+           placeholder="Fx Trampe123">
 
-    <div style="margin-bottom: 1rem;">
-      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark); font-size: 0.9rem;">Adgangskode</label>
-      <input id="register-password" type="password" placeholder="Mindst 6 tegn"
-             style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-gray); border-radius: 8px; font-size: 1rem;">
-      <p style="font-size: 0.8rem; color: var(--text-light); margin: 0.3rem 0 0 0;">Mindst 6 tegn</p>
-    </div>
-
-    <div style="margin-bottom: 1.5rem;">
-      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark); font-size: 0.9rem;">Gentag adgangskode</label>
-      <input id="register-password-confirm" type="password" placeholder="Gentag adgangskode"
-             style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-gray); border-radius: 8px; font-size: 1rem;">
-    </div>
-
-    <div id="register-error-message" style="display: none; background-color: #fed7d7; color: #742a2a; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem;"></div>
-
-    <button onclick="register()" class="btn btn-success" style="width: 100%; padding: 0.9rem; font-size: 1rem; margin-bottom: 1rem; background-color: var(--success-green);">
-      Opret bruger
-    </button>
-
-    <div style="text-align: center; padding-top: 1rem; border-top: 1px solid var(--border-gray);">
-      <p style="color: var(--text-gray); margin: 0 0 0.5rem 0; font-size: 0.9rem;">Har du allerede en konto?</p>
-      <button onclick="showLogin()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 0.95rem; font-weight: 600;">
-        Log ind her
-      </button>
-    </div>
-  </div>
-
-  <!-- USERNAME BOX -->
-  <div id="usernameBox" style="display: none;">
-    <h2 style="font-size: 1.3rem; margin: 0 0 1rem 0; text-align: center; color: var(--text-dark);">Vælg dit brugernavn</h2>
-    <p style="color: var(--text-gray); text-align: center; margin-bottom: 1.5rem; font-size: 0.9rem;">Dette navn vises på leaderboard</p>
-
-    <div style="margin-bottom: 1rem;">
-      <label style="display: block; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-dark); font-size: 0.9rem;">Brugernavn</label>
-      <input id="usernameInput" type="text" placeholder="F.eks. Trampe123"
-             style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-gray); border-radius: 8px; font-size: 1rem;">
-      <p style="font-size: 0.8rem; color: var(--text-light); margin: 0.3rem 0 0 0;">Mindst 2 tegn</p>
-    </div>
-
-    <div id="username-error-message" style="display: none; background-color: #fed7d7; color: #742a2a; padding: 0.75rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.9rem;"></div>
-
-    <button onclick="saveUsername()" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-size: 1rem;">
-      Fortsæt til TrampesTips
+    <button onclick="saveUsername()"
+            class="bg-green-600 text-white w-full py-2 rounded">
+      Gem brugernavn
     </button>
   </div>
 
 </div>
 
 <script>
-document.getElementById('aar').textContent = new Date().getFullYear();
-
+/* ======================
+   Firebase setup
+====================== */
 const firebaseConfig = {
   apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
   authDomain: "trampestips.firebaseapp.com",
@@ -131,192 +70,76 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-function showLogin() {
-  document.getElementById("loginBox").style.display = "block";
-  document.getElementById("registerBox").style.display = "none";
-  clearErrors();
-}
-
-function showRegister() {
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("registerBox").style.display = "block";
-  clearErrors();
-}
-
-function clearErrors() {
-  document.getElementById("error-message").style.display = "none";
-  document.getElementById("register-error-message").style.display = "none";
-  document.getElementById("username-error-message").style.display = "none";
-}
-
+/* ======================
+   Login
+====================== */
 async function login() {
-  const email = document.getElementById("email").value.trim();
+  const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
-  const errorEl = document.getElementById("error-message");
 
-  if (!email || !password) {
-    errorEl.textContent = "Udfyld både email og adgangskode";
-    errorEl.style.display = "block";
-    return;
-  }
-
-  try {
-    await auth.signInWithEmailAndPassword(email, password);
-  } catch (error) {
-    console.error(error);
-    let message = "Der opstod en fejl ved login";
-    
-    if (error.code === 'auth/user-not-found') {
-      message = "Ingen bruger med denne email. Opret en ny bruger?";
-    } else if (error.code === 'auth/wrong-password') {
-      message = "Forkert adgangskode";
-    } else if (error.code === 'auth/invalid-email') {
-      message = "Ugyldig email-adresse";
-    } else if (error.code === 'auth/too-many-requests') {
-      message = "For mange forsøg. Prøv igen senere.";
-    }
-    
-    errorEl.textContent = message;
-    errorEl.style.display = "block";
-  }
+  await auth.signInWithEmailAndPassword(email, password);
 }
 
-async function register() {
-  const email = document.getElementById("register-email").value.trim();
-  const password = document.getElementById("register-password").value;
-  const passwordConfirm = document.getElementById("register-password-confirm").value;
-  const errorEl = document.getElementById("register-error-message");
-
-  if (!email || !password || !passwordConfirm) {
-    errorEl.textContent = "Udfyld alle felter";
-    errorEl.style.display = "block";
-    return;
-  }
-
-  if (password !== passwordConfirm) {
-    errorEl.textContent = "Adgangskoderne matcher ikke";
-    errorEl.style.display = "block";
-    return;
-  }
-
-  if (password.length < 6) {
-    errorEl.textContent = "Adgangskode skal være mindst 6 tegn";
-    errorEl.style.display = "block";
-    return;
-  }
-
-  try {
-    await auth.createUserWithEmailAndPassword(email, password);
-  } catch (error) {
-    console.error(error);
-    let message = "Der opstod en fejl ved oprettelse";
-    
-    if (error.code === 'auth/email-already-in-use') {
-      message = "Denne email er allerede i brug. Prøv at logge ind i stedet?";
-    } else if (error.code === 'auth/invalid-email') {
-      message = "Ugyldig email-adresse";
-    } else if (error.code === 'auth/weak-password') {
-      message = "Adgangskoden er for svag. Brug mindst 6 tegn.";
-    }
-    
-    errorEl.textContent = message;
-    errorEl.style.display = "block";
-  }
-}
-
+/* ======================
+   Reset password
+====================== */
 async function resetPassword() {
-  const email = document.getElementById("email").value.trim();
-  const errorEl = document.getElementById("error-message");
+  const email = document.getElementById("email").value;
 
   if (!email) {
-    errorEl.textContent = "Indtast din email først";
-    errorEl.style.display = "block";
+    alert("Indtast din email først");
     return;
   }
 
   try {
     await auth.sendPasswordResetEmail(email);
-    errorEl.style.display = "block";
-    errorEl.style.backgroundColor = "#c6f6d5";
-    errorEl.style.color = "#22543d";
-    errorEl.textContent = "Der er sendt en email med link til nulstilling af adgangskode.";
+    alert("Der er sendt en e-mail med link til nulstilling af adgangskode.");
   } catch (error) {
-    errorEl.style.backgroundColor = "#fed7d7";
-    errorEl.style.color = "#742a2a";
-    errorEl.textContent = error.message;
-    errorEl.style.display = "block";
+    alert(error.message);
   }
 }
 
+/* ======================
+   Auth flow
+====================== */
 auth.onAuthStateChanged(async (user) => {
   if (!user) return;
 
   const userRef = db.collection("users").doc(user.uid);
   const doc = await userRef.get();
 
+  // Hvis brugeren allerede har et brugernavn
   if (doc.exists && doc.data().username) {
     window.location.href = "kampe_fixed.html";
     return;
   }
 
-  document.getElementById("loginBox").style.display = "none";
-  document.getElementById("registerBox").style.display = "none";
-  document.getElementById("usernameBox").style.display = "block";
+  // Ellers vis brugernavn-felt
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("usernameBox").classList.remove("hidden");
 });
 
+/* ======================
+   Save username
+====================== */
 async function saveUsername() {
   const username = document.getElementById("usernameInput").value.trim();
-  const errorEl = document.getElementById("username-error-message");
 
   if (username.length < 2) {
-    errorEl.textContent = "Brugernavn skal være mindst 2 tegn";
-    errorEl.style.display = "block";
+    alert("Brugernavn skal være mindst 2 tegn");
     return;
   }
 
   const user = auth.currentUser;
-  if (!user) return;
 
-  const existing = await db
-    .collection("users")
-    .where("username", "==", username)
-    .get();
+  await db.collection("users").doc(user.uid).set({
+    email: user.email,
+    username: username,
+    createdAt: new Date()
+  }, { merge: true });
 
-  if (!existing.empty) {
-    errorEl.textContent = "Brugernavn er allerede taget. Prøv et andet.";
-    errorEl.style.display = "block";
-    return;
-  }
-
-  try {
-    await db.collection("users").doc(user.uid).set({
-      email: user.email,
-      username: username,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    }, { merge: true });
-
-    window.location.href = "kampe_fixed.html";
-  } catch (error) {
-    errorEl.textContent = "Fejl ved gemning: " + error.message;
-    errorEl.style.display = "block";
-  }
+  window.location.href = "kampe_fixed.html";
 }
-
-document.addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    const loginBox = document.getElementById("loginBox");
-    const registerBox = document.getElementById("registerBox");
-    const usernameBox = document.getElementById("usernameBox");
-    
-    if (loginBox.style.display !== "none") {
-      login();
-    } else if (registerBox.style.display !== "none") {
-      register();
-    } else if (usernameBox.style.display !== "none") {
-      saveUsername();
-    }
-  }
-});
 </script>
 
 </body>
