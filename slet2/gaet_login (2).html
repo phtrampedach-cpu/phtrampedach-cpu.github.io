@@ -259,7 +259,7 @@ auth.onAuthStateChanged(async (user) => {
   const doc = await userRef.get();
 
   if (doc.exists && doc.data().username) {
-    window.location.href = "kampe_fixed.html";
+    window.location.href = "kampe.html";
     return;
   }
 
@@ -299,7 +299,7 @@ async function saveUsername() {
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     }, { merge: true });
 
-    window.location.href = "kampe_fixed.html";
+    window.location.href = "kampe.html";
   } catch (error) {
     errorEl.textContent = "Fejl ved gemning: " + error.message;
     errorEl.style.display = "block";
