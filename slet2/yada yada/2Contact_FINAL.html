@@ -21,7 +21,7 @@
         <a href="#" style="color: var(--text-light); padding: 0.75rem 1rem; display: block; cursor: not-allowed;">👥 Gæt på tilskuertal (kommer snart)</a>
       </div>
     </div>
-    <a href="leaderboard.html" id="leaderboardLink">Leaderboard</a>
+    <a href="leaderboard.html" id="leaderboardLink" style="display: none;">Leaderboard</a>
     <a href="2Contact.html" class="active">Kontakt</a>
     
     <a href="gaet_login.html" id="loginBtn" style="background-color: var(--success-green); margin-left: auto;">Log ind</a>
@@ -45,8 +45,8 @@
           <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; font-size: 1.1rem;">
             📧 Email
           </div>
-          <a href="/cdn-cgi/l/email-protection#99e9b7f1b7edebf8f4e9fcfdf8faf1d9fef4f8f0f5b7faf6f4" style="color: var(--primary-blue); font-size: 1.1rem; text-decoration: none; font-weight: 500;">
-            <span class="__cf_email__" data-cfemail="54247a3c7a2026353924313035373c143339353d387a373b39">[email&#160;protected]</span>
+          <a href="mailto:p.h.trampedach@gmail.com" style="color: var(--primary-blue); font-size: 1.1rem; text-decoration: none; font-weight: 500;">
+            p.h.trampedach@gmail.com
           </a>
         </div>
         
@@ -73,7 +73,7 @@
   <p>© <span id="aar"></span> TrampesTips</p>
 </footer>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 document.getElementById('aar').textContent = new Date().getFullYear();
 </script>
 
@@ -124,7 +124,7 @@ firebase.auth().onAuthStateChanged(user => {
     loginBtn.style.display = "none";
     logoutBtn.style.display = "block";
     dashboardDropdown.style.display = "block";
-    // leaderboardLink.style.display = "block"; // Leaderboard always visible
+    leaderboardLink.style.display = "block";
 
     if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
       const exists = Array.from(menuBar.children).some(el => {
@@ -143,11 +143,23 @@ firebase.auth().onAuthStateChanged(user => {
     loginBtn.style.display = "block";
     logoutBtn.style.display = "none";
     dashboardDropdown.style.display = "none";
-    // leaderboardLink.style.display = "none"; // Leaderboard always visible
+    leaderboardLink.style.display = "none";
     
     const adminLink = document.getElementById("adminLink");
     if (adminLink) adminLink.remove();
   }
 
   const currentPage = window.location.pathname.split("/").pop() || "2Contact.html";
-  const links = document.querySelectorAll
+  const links = document.querySelectorAll(".menu-bar a");
+  links.forEach(a => {
+    if (a.href) {
+      const linkPage = a.href.split("/").pop();
+      if (linkPage === currentPage) a.classList.add("active");
+      else a.classList.remove("active");
+    }
+  });
+});
+</script>
+
+</body>
+</html>

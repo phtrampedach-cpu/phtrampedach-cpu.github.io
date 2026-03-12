@@ -21,7 +21,7 @@
         <a href="#" style="color: var(--text-light); padding: 0.75rem 1rem; display: block; cursor: not-allowed;">👥 Gæt på tilskuertal (kommer snart)</a>
       </div>
     </div>
-    <a href="leaderboard.html" id="leaderboardLink">Leaderboard</a>
+    <a href="leaderboard.html" id="leaderboardLink" style="display: none;">Leaderboard</a>
     <a href="2Contact.html">Kontakt</a>
     
     <!-- Login/Logout button -->
@@ -159,7 +159,7 @@ document.getElementById('aar').textContent = new Date().getFullYear();
       loginBtn.style.display = "none";
       logoutBtn.style.display = "block";
       dashboardDropdown.style.display = "block";
-      // leaderboardLink.style.display = "block"; // Leaderboard always visible
+      leaderboardLink.style.display = "block";
 
       // Add admin link if admin - WORKS ON ALL PAGES
       if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
@@ -180,7 +180,7 @@ document.getElementById('aar').textContent = new Date().getFullYear();
       loginBtn.style.display = "block";
       logoutBtn.style.display = "none";
       dashboardDropdown.style.display = "none";
-      // leaderboardLink.style.display = "none"; // Leaderboard always visible
+      leaderboardLink.style.display = "none";
       
       // Remove admin link if it exists
       const adminLink = document.getElementById("adminLink");
