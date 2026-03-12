@@ -1,13 +1,8 @@
-<!doctype html>
-<html lang="da">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kontakt - TrampesTips</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+# HEADER TEMPLATE - Brug denne i alle HTML filer
 
+## HTML Header (i <body>):
+
+```html
 <header>
   <nav class="menu-bar" id="menuBar">
     <a href="index.html">Forside</a>
@@ -22,70 +17,27 @@
       </div>
     </div>
     <a href="leaderboard.html" id="leaderboardLink" style="display: none;">Leaderboard</a>
-    <a href="2Contact.html" class="active">Kontakt</a>
+    <a href="2Contact.html">Kontakt</a>
     
+    <!-- Login/Logout button -->
     <a href="gaet_login.html" id="loginBtn" style="background-color: var(--success-green); margin-left: auto;">Log ind</a>
     <a href="#" id="logoutBtn" onclick="logout(); return false;" style="background-color: var(--error-red); margin-left: auto; display: none;">Log ud</a>
   </nav>
 </header>
+```
 
-<main>
-  <div class="content-box fade-in">
-    <h1>📬 Kontakt</h1>
-    
-    <section style="margin-bottom: 2rem;">
-      <h2>Har du spørgsmål eller feedback?</h2>
-      <p>Jeg vil meget gerne høre fra dig! Uanset om det er tekniske problemer, forslag til forbedringer eller bare generel feedback.</p>
-    </section>
+## JavaScript (før </body>):
 
-    <section style="margin-bottom: 2rem;">
-      <h2>Kontaktinformation</h2>
-      <div style="background-color: var(--bg-gray); padding: 2rem; border-radius: 12px; margin-top: 1rem;">
-        <div style="margin-bottom: 1.5rem;">
-          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; font-size: 1.1rem;">
-            📧 Email
-          </div>
-          <a href="mailto:p.h.trampedach@gmail.com" style="color: var(--primary-blue); font-size: 1.1rem; text-decoration: none; font-weight: 500;">
-            p.h.trampedach@gmail.com
-          </a>
-        </div>
-        
-        <div>
-          <div style="font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; font-size: 1.1rem;">
-            📱 Telefon
-          </div>
-          <a href="tel:12345678" style="color: var(--primary-blue); font-size: 1.1rem; text-decoration: none; font-weight: 500;">
-            12 34 56 78
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <section style="background-color: #e0f2fe; padding: 1.5rem; border-radius: 12px; border-left: 4px solid var(--primary-blue);">
-      <h3 style="margin-top: 0; color: var(--primary-blue);">💡 Kommende funktioner</h3>
-      <p style="margin-bottom: 0.5rem;">Vi arbejder på at tilføje en direkte kontaktformular, så du nemt kan sende beskeder direkte fra siden.</p>
-      <p style="margin-bottom: 0; color: var(--text-gray); font-size: 0.95rem;">Indtil da er du velkommen til at kontakte mig via email eller telefon ovenfor.</p>
-    </section>
-  </div>
-</main>
-
-<footer>
-  <p>© <span id="aar"></span> TrampesTips</p>
-</footer>
-
+```javascript
 <script>
-document.getElementById('aar').textContent = new Date().getFullYear();
-</script>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script>
+// Logout function
 function logout() {
   firebase.auth().signOut().then(() => {
     window.location.href = "index.html";
   });
 }
 
+// Dropdown functionality
 const dashboardDropdown = document.getElementById("dashboardDropdown");
 if (dashboardDropdown) {
   const dropdownLink = dashboardDropdown.querySelector("a");
@@ -97,19 +49,13 @@ if (dashboardDropdown) {
     dropdownContent.style.display = isVisible ? "none" : "block";
   });
 
+  // Close dropdown when clicking outside
   document.addEventListener("click", (e) => {
     if (!dashboardDropdown.contains(e.target)) {
       dropdownContent.style.display = "none";
     }
   });
 }
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBQBoHOBENQHP20J7pv1kkEs2gTd7r_flg",
-  authDomain: "trampestips.firebaseapp.com",
-  projectId: "trampestips",
-};
-firebase.initializeApp(firebaseConfig);
 
 const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
 
@@ -118,38 +64,35 @@ firebase.auth().onAuthStateChanged(user => {
   const logoutBtn = document.getElementById("logoutBtn");
   const dashboardDropdown = document.getElementById("dashboardDropdown");
   const leaderboardLink = document.getElementById("leaderboardLink");
-  const menuBar = document.getElementById("menuBar");
 
   if (user) {
+    // User is logged in
     loginBtn.style.display = "none";
     logoutBtn.style.display = "block";
     dashboardDropdown.style.display = "block";
     leaderboardLink.style.display = "block";
 
+    // Add admin link if admin
     if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-      const exists = Array.from(menuBar.children).some(el => {
-        return el.tagName === 'A' && el.href && el.href.includes("admin.html");
-      });
-      
+      const menuBar = document.getElementById("menuBar");
+      const exists = Array.from(menuBar.children).some(a => a.href && a.href.includes("admin.html"));
       if (!exists) {
         const adminLink = document.createElement("a");
         adminLink.href = "admin.html";
         adminLink.textContent = "Admin";
-        adminLink.id = "adminLink";
         menuBar.insertBefore(adminLink, logoutBtn);
       }
     }
   } else {
+    // User is NOT logged in
     loginBtn.style.display = "block";
     logoutBtn.style.display = "none";
     dashboardDropdown.style.display = "none";
     leaderboardLink.style.display = "none";
-    
-    const adminLink = document.getElementById("adminLink");
-    if (adminLink) adminLink.remove();
   }
 
-  const currentPage = window.location.pathname.split("/").pop() || "2Contact.html";
+  // Set active page
+  const currentPage = window.location.pathname.split("/").pop() || "index.html";
   const links = document.querySelectorAll(".menu-bar a");
   links.forEach(a => {
     if (a.href) {
@@ -160,6 +103,17 @@ firebase.auth().onAuthStateChanged(user => {
   });
 });
 </script>
+```
 
-</body>
-</html>
+## Filer der skal opdateres:
+- [x] index_new.html (DONE)
+- [ ] dashboard_new.html
+- [ ] 2Contact_new.html
+- [ ] kampe_fixed.html
+- [ ] leaderboard_v2.html
+- [ ] admin_fixed.html
+
+## Husk:
+1. Erstat hele <header> sektionen
+2. Tilføj logout() funktionen og auth logic før </body>
+3. Sørg for Firebase auth er initialiseret først
