@@ -14,23 +14,11 @@
 <body>
 
 <header>
-  <nav class="menu-bar" id="menuBar">
+  <nav class="menu-bar">
     <a href="index.html">Forside</a>
-    <div class="dropdown" id="dashboardDropdown" style="position: relative; display: none;">
-      <a href="dashboard.html" class="active" style="display: flex; align-items: center; gap: 0.3rem;">
-        Dashboard
-        <span style="font-size: 0.7rem;">▼</span>
-      </a>
-      <div class="dropdown-content" style="display: none; position: absolute; top: 100%; left: 0; background: white; min-width: 200px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; margin-top: 0.5rem; z-index: 1000;">
-        <a href="kampe.html" style="color: var(--text-dark); padding: 0.75rem 1rem; display: block; border-bottom: 1px solid var(--border-gray);">⚽ Gæt på kampe</a>
-        <a href="#" style="color: var(--text-light); padding: 0.75rem 1rem; display: block; cursor: not-allowed;">👥 Gæt på tilskuertal (kommer snart)</a>
-      </div>
-    </div>
-    <a href="leaderboard.html" id="leaderboardLink" style="display: none;">Leaderboard</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="leaderboard_fixed.html">Leaderboard</a>
     <a href="2Contact.html">Kontakt</a>
-    
-    <a href="gaet_login.html" id="loginBtn" style="background-color: var(--success-green); margin-left: auto;">Log ind</a>
-    <a href="#" id="logoutBtn" onclick="logout(); return false;" style="background-color: var(--error-red); margin-left: auto; display: none;">Log ud</a>
   </nav>
 </header>
 
@@ -40,7 +28,7 @@
     <p id="user-info" class="text-center" style="font-size: 1.1rem; color: var(--text-gray); margin-bottom: 2rem;"></p>
 
     <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem;">
-      <button class="btn btn-primary" onclick="window.location.href='kampe.html'" style="font-size: 1rem; min-width: 200px;">
+      <button class="btn btn-primary" onclick="window.location.href='kampe_fixed.html'" style="font-size: 1rem; min-width: 200px;">
         ⚽ Gæt på kampe
       </button>
       <button class="btn" id="btn-tilskuertal" style="background-color: var(--text-light); color: white; font-size: 1rem; min-width: 200px;">
@@ -83,76 +71,13 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
 const analytics = firebase.analytics(app);
 const db = firebase.firestore();
 
-const ADMIN_EMAIL = "p.h.trampedach@gmail.com";
-
-function logout() {
-  firebase.auth().signOut().then(() => {
-    window.location.href = "gaet_login.html";
-  });
-}
-
-// Dropdown functionality
-const dashboardDropdown = document.getElementById("dashboardDropdown");
-if (dashboardDropdown) {
-  const dropdownLink = dashboardDropdown.querySelector("a");
-  const dropdownContent = dashboardDropdown.querySelector(".dropdown-content");
-  
-  dropdownLink.addEventListener("click", (e) => {
-    e.preventDefault();
-    const isVisible = dropdownContent.style.display === "block";
-    dropdownContent.style.display = isVisible ? "none" : "block";
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!dashboardDropdown.contains(e.target)) {
-      dropdownContent.style.display = "none";
-    }
-  });
-}
-
 const userInfo = document.getElementById('user-info');
 auth.onAuthStateChanged(user => {
-  const loginBtn = document.getElementById("loginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const dashboardDropdown = document.getElementById("dashboardDropdown");
-  const leaderboardLink = document.getElementById("leaderboardLink");
-  const menuBar = document.getElementById("menuBar");
-
   if (user) {
     userInfo.innerHTML = `Velkommen tilbage, <strong>${user.email}</strong>! 👋`;
-    
-    loginBtn.style.display = "none";
-    logoutBtn.style.display = "block";
-    dashboardDropdown.style.display = "block";
-    leaderboardLink.style.display = "block";
-
-    // Add admin link if admin - WORKS ON ALL PAGES
-    if (user.email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) {
-      const exists = Array.from(menuBar.children).some(el => {
-        return el.tagName === 'A' && el.href && el.href.includes("admin.html");
-      });
-      
-      if (!exists) {
-        const adminLink = document.createElement("a");
-        adminLink.href = "admin.html";
-        adminLink.textContent = "Admin";
-        adminLink.id = "adminLink";
-        menuBar.insertBefore(adminLink, logoutBtn);
-      }
-    }
   } else {
     window.location.href = "gaet_login.html";
   }
-
-  const currentPage = window.location.pathname.split("/").pop() || "dashboard.html";
-  const links = document.querySelectorAll(".menu-bar a");
-  links.forEach(a => {
-    if (a.href) {
-      const linkPage = a.href.split("/").pop();
-      if (linkPage === currentPage) a.classList.add("active");
-      else a.classList.remove("active");
-    }
-  });
 });
 
 const contentArea = document.getElementById('content-area');
